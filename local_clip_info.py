@@ -24,10 +24,6 @@ class LocalClipInfo(ClipInfo):
         return content["tiers"][3]["entries"]
 
 
-    def get_clip_sound(self, clip_name: str) -> BinaryIO:
+    def get_clip_sound(self, clip_name: str) -> tuple[BinaryIO, int]:
         audio_path = self.audio_dir / f"{clip_name}.opus"
-
-        if not audio_path.is_file():
-            raise FileNotFoundError(clip_name)
-
-        return audio_path.open("rb")
+        return audio_path.open("rb"), audio_path.stat().st_size

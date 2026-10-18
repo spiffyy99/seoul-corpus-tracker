@@ -12,5 +12,5 @@ class ClipInfo(ABC):
         pass
 
     @abstractmethod
-    def get_clip_sound(self, clip_name: str) -> BinaryIO:
+    def get_clip_sound(self, clip_name: str) -> tuple[BinaryIO, int]:
         pass

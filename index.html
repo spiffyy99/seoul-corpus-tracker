@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Korean Listening Practice</title>
+    <title>Seoul Corpus Tracker</title>
 
     <style>
         body {
@@ -78,9 +78,45 @@
             overflow-wrap: anywhere;
         }
 
-        audio {
-            width: 100%;
+        #player {
+            display: none;
+        }
+
+        .audio-controls {
             margin: 12px 0;
+            padding: 12px;
+            background: #f7f7f8;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .audio-control-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #play-pause {
+            flex-shrink: 0;
+            min-width: 76px;
+            padding: 7px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: white;
+        }
+
+        #progress {
+            flex: 1;
+            min-width: 0;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        #audio-time {
+            color: #555;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
         }
 
         #clip-search,
@@ -166,12 +202,64 @@
                 grid-template-columns: auto minmax(80px, 1fr) 48px;
                 gap: 8px;
             }
+
+            .audio-control-row {
+                gap: 8px;
+            }
+
+            #play-pause {
+                min-width: 66px;
+            }
+        }
+        .attribution {
+            position: relative;
+            width: fit-content;
+            margin: 24px auto 12px;
+            text-align: center;
+            font: 13px Arial, sans-serif;
+            color: #888;
+        }
+
+        .attribution-label {
+            cursor: help;
+            text-decoration: underline dotted;
+            text-underline-offset: 3px;
+        }
+
+        .attribution-tooltip {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(340px, 85vw);
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #222;
+            color: #eee;
+            font-size: 12px;
+            line-height: 1.5;
+            text-align: left;
+            box-shadow: 0 4px 14px #0003;
+            transition: opacity 0.15s;
+            z-index: 100;
+        }
+
+        .attribution:hover .attribution-tooltip,
+        .attribution:focus-within .attribution-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .attribution-tooltip a {
+            color: #9dcaff;
         }
     </style>
 </head>
 
 <body>
-    <h1>Korean Listening Practice</h1>
+    <h1>Seoul Corpus Tracker</h1>
     <p id="status">Loading recordings…</p>
 
     <div class="layout">
@@ -190,7 +278,28 @@
         <main class="panel">
             <h2 id="clip-title">Choose a recording</h2>
 
-            <audio id="player" controls preload="metadata"></audio>
+            <audio id="player" preload="metadata"></audio>
+
+            <div class="audio-controls">
+                <div class="audio-control-row">
+                    <button id="play-pause" type="button" disabled>
+                        Play
+                    </button>
+
+                    <input
+                        id="progress"
+                        type="range"
+                        min="0"
+                        max="0"
+                        step="0.01"
+                        value="0"
+                        aria-label="Audio position"
+                        disabled
+                    >
+
+                    <span id="audio-time">0:00 / 0:00</span>
+                </div>
+            </div>
 
             <div class="speed-setting">
                 <label for="speed">Speed</label>
@@ -217,11 +326,7 @@
             </div>
 
             <label class="setting">
-                <input
-                    id="hide-short"
-                    type="checkbox"
-                    checked
-                >
+                <input id="hide-short" type="checkbox" checked>
                 Hide utterances with 3 characters or fewer
             </label>
 
@@ -252,6 +357,9 @@
         const captionsEnabled = document.querySelector("#captions-enabled");
         const caption = document.querySelector("#caption");
         const hideShort = document.querySelector("#hide-short");
+        const playPause = document.querySelector("#play-pause");
+        const progress = document.querySelector("#progress");
+        const audioTime = document.querySelector("#audio-time");
 
         let clips = [];
         let currentClip = null;
@@ -259,12 +367,13 @@
         let activeUtteranceEnd = null;
         let activeUtterance = null;
         let selectionId = 0;
+        let estimatedDuration = 0;
+        let seeking = false;
 
         const utteranceCache = new Map();
         const utteranceButtons = new Map();
 
         function parseEntry(entry) {
-            // Supports [start, end, text] and object-shaped entries.
             if (Array.isArray(entry)) {
                 return {
                     start: Number(entry[0]),
@@ -281,12 +390,13 @@
         }
 
         function formatTime(seconds) {
-            if (!Number.isFinite(seconds)) return "--:--";
+            if (!Number.isFinite(seconds) || seconds < 0) {
+                return "--:--";
+            }
 
-            const minutes = Math.floor(seconds / 60);
-            const remaining = (seconds % 60)
-                .toFixed(1)
-                .padStart(4, "0");
+            const wholeSeconds = Math.floor(seconds);
+            const minutes = Math.floor(wholeSeconds / 60);
+            const remaining = String(wholeSeconds % 60).padStart(2, "0");
 
             return `${minutes}:${remaining}`;
         }
@@ -323,6 +433,57 @@
                 });
         }
 
+        function resetAudioControls() {
+            estimatedDuration = 0;
+            seeking = false;
+
+            progress.min = "0";
+            progress.max = "0";
+            progress.value = "0";
+            progress.disabled = true;
+
+            playPause.disabled = true;
+            playPause.textContent = "Play";
+            audioTime.textContent = "0:00 / 0:00";
+        }
+
+        function setEstimatedDuration() {
+            // The last utterance's end time is our duration estimate.
+            // It does not depend on the browser's media duration.
+            estimatedDuration = utterances.reduce(
+                (latest, item) => Math.max(
+                    latest,
+                    Number.isFinite(item.end) ? item.end : 0
+                ),
+                0
+            );
+
+            progress.min = "0";
+            progress.max = String(estimatedDuration);
+            progress.value = "0";
+            progress.disabled = estimatedDuration <= 0;
+            playPause.disabled = !player.src;
+
+            updateAudioControls();
+        }
+
+        function updateAudioControls() {
+            const currentTime = Number.isFinite(player.currentTime)
+                ? player.currentTime
+                : 0;
+
+            if (!seeking) {
+                progress.value = String(
+                    Math.min(currentTime, estimatedDuration)
+                );
+            }
+
+            audioTime.textContent =
+                `${formatTime(currentTime)} / ${formatTime(estimatedDuration)}`;
+
+            playPause.textContent = player.paused ? "Play" : "Pause";
+        }
+
         async function selectClip(name) {
             const thisSelection = ++selectionId;
 
@@ -335,6 +496,7 @@
             player.pause();
             player.removeAttribute("src");
             player.load();
+            resetAudioControls();
 
             caption.textContent = "";
             caption.classList.toggle("disabled", !captionsEnabled.checked);
@@ -357,12 +519,10 @@
                         `/api/clips/${encodeURIComponent(name)}/utterances`
                     );
 
-                    // The API may return entries directly or inside tiers.
                     const entries = Array.isArray(data)
                         ? data
                         : data.tiers[3].entries;
 
-                    // Keep ALL utterances in the cache, including short ones.
                     utteranceCache.set(name, entries.map(parseEntry));
                 }
 
@@ -370,14 +530,17 @@
 
                 utterances = utteranceCache.get(name);
                 renderUtterances();
+                setEstimatedDuration();
 
                 player.src =
                     `/api/clips/${encodeURIComponent(name)}/play`;
                 player.playbackRate = Number(speed.value);
                 player.load();
 
+                playPause.disabled = estimatedDuration <= 0;
+
                 status.textContent =
-                    `${utterances.length} utterances loaded`;
+                    `${utterances.length} utterances loaded · `
             } catch (error) {
                 if (thisSelection !== selectionId) return;
 
@@ -391,9 +554,6 @@
 
             return utterances.filter(item => {
                 const matchesSearch = item.text.toLowerCase().includes(query);
-
-                // Count Korean characters without counting spaces or other
-                // whitespace. Captions still use the full utterance array.
                 const characterCount = item.text.replace(/\s/g, "").length;
                 const isShort = characterCount <= 3;
 
@@ -453,9 +613,8 @@
             const seekAndPlay = async () => {
                 if (thisSelection !== selectionId) return;
 
-                player.currentTime = item.start;
-
                 try {
+                    player.currentTime = item.start;
                     await player.play();
                 } catch (error) {
                     activeUtteranceEnd = null;
@@ -486,12 +645,25 @@
         }
 
         function updateActiveUtterance(time) {
-            const current = utterances.find(item =>
-                time >= item.start && time < item.end
-            );
+            // Keep the most recently started subtitle visible until the
+            // next utterance begins, even if its own end time has passed.
+            let current = null;
+
+            for (const item of utterances) {
+                if (item.start <= time) {
+                    if (
+                        current === null ||
+                        item.start >= current.start
+                    ) {
+                        current = item;
+                    }
+                } else {
+                    break;
+                }
+            }
 
             if (current !== activeUtterance) {
-                activeUtterance = current ?? null;
+                activeUtterance = current;
 
                 utteranceButtons.forEach(button => {
                     button.classList.remove("active");
@@ -503,9 +675,52 @@
 
                 if (button) button.classList.add("active");
 
-                updateCaption(current ?? null);
+                updateCaption(current);
             }
         }
+
+        playPause.addEventListener("click", async () => {
+            if (!player.src) return;
+
+            if (player.paused) {
+                if (
+                    estimatedDuration > 0 &&
+                    player.currentTime >= estimatedDuration
+                ) {
+                    player.currentTime = 0;
+                }
+
+                try {
+                    await player.play();
+                } catch (error) {
+                    status.textContent =
+                        `Playback failed: ${error.message}`;
+                }
+            } else {
+                player.pause();
+            }
+
+            updateAudioControls();
+        });
+
+        progress.addEventListener("input", () => {
+            seeking = true;
+            audioTime.textContent =
+                `${formatTime(Number(progress.value))} / ` +
+                `${formatTime(estimatedDuration)}`;
+        });
+
+        progress.addEventListener("change", () => {
+            const targetTime = Number(progress.value);
+            seeking = false;
+
+            if (Number.isFinite(targetTime)) {
+                player.currentTime = targetTime;
+                updateActiveUtterance(targetTime);
+            }
+
+            updateAudioControls();
+        });
 
         speed.addEventListener("input", () => {
             const rate = Number(speed.value);
@@ -518,7 +733,6 @@
         });
 
         hideShort.addEventListener("change", renderUtterances);
-
         clipSearch.addEventListener("input", renderClips);
         utteranceSearch.addEventListener("input", renderUtterances);
 
@@ -530,20 +744,33 @@
                 time >= activeUtteranceEnd
             ) {
                 const end = activeUtteranceEnd;
-
                 activeUtteranceEnd = null;
+
                 player.pause();
                 player.currentTime = end;
 
+                // Keep the selected subtitle visible after playback stops.
                 updateCaption(activeUtterance);
+                updateAudioControls();
                 return;
             }
 
             updateActiveUtterance(time);
+            updateAudioControls();
         });
 
+        player.addEventListener("play", updateAudioControls);
+        player.addEventListener("pause", updateAudioControls);
         player.addEventListener("ended", () => {
             activeUtteranceEnd = null;
+            updateAudioControls();
+        });
+
+        player.addEventListener("error", () => {
+            if (currentClip) {
+                status.textContent =
+                    "Audio failed to load. Check the playback endpoint.";
+            }
         });
 
         init();
@@ -561,4 +788,23 @@
         }
     </script>
 </body>
+<footer class="attribution">
+    <span class="attribution-label" tabindex="0">Attribution &amp; Disclaimer</span>
+    <div class="attribution-tooltip" role="tooltip">
+      Uses the <em>Korean Corpus of Spontaneous Speech (Seoul Corpus)</em>,
+      available from <a href="https://www.openslr.org/113/" target="_blank" rel="noopener">OpenSLR (SLR113)</a>,
+      licensed under
+      <a href="https://creativecommons.org/licenses/by-nc/2.0/" target="_blank" rel="noopener">CC BY-NC 2.0</a> for non-commercial use.
+      Supported by the National Research Foundation of Korea
+      (NRF-2012S1A5A2A03034027).
+  
+      <br><br>
+      Citation: Yun et al. (2015), “The Korean Corpus of Spontaneous Speech,”
+      <em>Journal of the Korean Society of Speech Sciences</em>, 7(2), 103–109.
+  
+      <br><br>
+      Audio may be compressed or presented in segments for listening practice.
+      This is an independent project, not affiliated with or endorsed by the corpus creators or OpenSLR.
+    </div>
+</footer>
 </html>

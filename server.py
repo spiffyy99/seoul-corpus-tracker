@@ -16,12 +16,16 @@ def utterances(clip_name: str):
 
 @app.get("/api/clips/<clip_name>/play")
 def play_sound(clip_name: str):
-    audio = clip_info.get_clip_sound(clip_name)
-    return send_file(
+    audio, length = clip_info.get_clip_sound(clip_name)
+    response = app.response_class(
         audio,
         mimetype="audio/ogg",
-        conditional=True,
+        direct_passthrough=True,
     )
+    response.content_length = length
+    response.headers["Accept-Ranges"] = "none"
+    response.call_on_close(audio.close)
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
