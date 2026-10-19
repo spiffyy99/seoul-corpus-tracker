@@ -3,9 +3,6 @@ main = "worker.py"
 compatibility_date = "2026-10-19"
 compatibility_flags = ["python_workers"]
 
-[build]
-command = "pip install -r requirements.txt"
-
 [[r2_buckets]]
 binding = "AUDIO_BUCKET"
 bucket_name = "kr-corpus-assets"

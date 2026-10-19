@@ -1,0 +1,10 @@
+[project]
+name = "seoul-corpus-tracker"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = [
+    "av>=12.3.0",
+    "flask>=3.0.3",
+    "praatio>=6.2.2",
+    "workers>=0.1",
+]
