@@ -562,10 +562,13 @@
                 renderUtterances();
                 setEstimatedDuration();
 
-                player.src =
-                    `/api/clips/${encodeURIComponent(name)}/play`;
-                player.playbackRate = Number(speed.value);
-                player.load();
+                // Only reload audio if it's a different clip
+                const newSrc = `/api/clips/${encodeURIComponent(name)}/play`;
+                if (currentClip !== name || player.src !== newSrc) {
+                    player.src = newSrc;
+                    player.playbackRate = Number(speed.value);
+                    player.load();
+                }
 
                 playPause.disabled = estimatedDuration <= 0;
 

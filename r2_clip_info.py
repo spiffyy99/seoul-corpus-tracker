@@ -21,8 +21,7 @@ class R2ClipInfo(ClipInfo):
         if object is None:
             raise FileNotFoundError(f"Audio clip not found: {key}")
 
-        # Read the body into BytesIO for compatibility
+        # Read into BytesIO for Flask compatibility
         body = object.body.read()
         return BytesIO(body), len(body)
-
 
