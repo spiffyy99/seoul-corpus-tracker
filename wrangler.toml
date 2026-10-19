@@ -7,4 +7,4 @@ command = "pip install -r requirements.txt"
 
 [[r2_buckets]]
 binding = "AUDIO_BUCKET"
-bucket_name = "seoul-corpus-audio"
+bucket_name = "kr-corpus-assets"
