@@ -1,4 +1,5 @@
 praatio
 av
 flask
-workers
+workers-py
+workers-runtime-sdk
