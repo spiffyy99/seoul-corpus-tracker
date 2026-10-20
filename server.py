@@ -1,13 +1,25 @@
 from __future__ import annotations
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
+import os
+from pathlib import Path
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='dist')
 clip_info = None
 
 
 def set_clip_info(clip_info_impl):
     global clip_info
     clip_info = clip_info_impl
+
+
+@app.get("/")
+def index():
+    return send_from_directory('dist', 'index.html')
+
+
+@app.get("/<path:path>")
+def static_files(path):
+    return send_from_directory('dist', path)
 
 
 @app.get("/api/clips/<clip_name>/play")
