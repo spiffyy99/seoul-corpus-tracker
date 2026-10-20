@@ -12,16 +12,6 @@ def set_clip_info(clip_info_impl):
     clip_info = clip_info_impl
 
 
-@app.get("/")
-def index():
-    return send_from_directory('dist', 'index.html')
-
-
-@app.get("/<path:path>")
-def static_files(path):
-    return send_from_directory('dist', path)
-
-
 @app.get("/api/clips/<clip_name>/play")
 def play_sound(clip_name: str):
     audio, length = clip_info.get_clip_sound(clip_name)
@@ -35,4 +25,14 @@ def play_sound(clip_name: str):
     response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     response.call_on_close(audio.close)
     return response
+
+
+@app.get("/")
+def index():
+    return send_from_directory('dist', 'index.html')
+
+
+@app.get("/<path:path>")
+def static_files(path):
+    return send_from_directory('dist', path)
 
