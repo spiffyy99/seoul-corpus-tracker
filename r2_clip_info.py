@@ -14,14 +14,13 @@ class R2ClipInfo(ClipInfo):
     def __init__(self, r2_bucket):
         self.r2_bucket = r2_bucket
 
-    def get_clip_sound(self, clip_name: str) -> tuple[BinaryIO, int]:
+    async def get_clip_sound(self, clip_name: str) -> tuple[BinaryIO, int]:
         key = f"{clip_name}.opus"
-        object = self.r2_bucket.get(key)
+        object = await self.r2_bucket.get(key)
 
         if object is None:
             raise FileNotFoundError(f"Audio clip not found: {key}")
 
         # Read into BytesIO for Flask compatibility
-        body = object.body.read()
+        body = await object.body.read()
         return BytesIO(body), len(body)
-

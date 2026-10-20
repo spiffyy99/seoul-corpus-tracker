@@ -12,3 +12,17 @@ not_found_handling = "single-page-application"
 [[r2_buckets]]
 binding = "AUDIO_BUCKET"
 bucket_name = "kr-corpus-assets"
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = false
+head_sampling_rate = 1
+persist = true
+
+[observability.issue_detection]
+enabled = false
