@@ -18,5 +18,5 @@ def parse_clip_name(clip_name: str) -> dict:
 
 class ClipInfo(ABC):
     @abstractmethod
-    async def get_clip_sound(self, clip_name: str) -> tuple[BinaryIO, int]:
+    def get_clip_sound(self, clip_name: str) -> tuple[BinaryIO, int]:
         pass

@@ -13,8 +13,8 @@ def set_clip_info(clip_info_impl):
 
 
 @app.get("/api/clips/<clip_name>/play")
-async def play_sound(clip_name: str):
-    audio, length = await clip_info.get_clip_sound(clip_name)
+def play_sound(clip_name: str):
+    audio, length = clip_info.get_clip_sound(clip_name)
     response = app.response_class(
         audio,
         mimetype="audio/webm",
