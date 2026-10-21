@@ -18,6 +18,12 @@ const speakerInfo = document.querySelector("#speaker-info");
 const libraryCount = document.querySelector("#library-count");
 const nextTrack = document.querySelector("#next-track");
 const randomTrack = document.querySelector("#random-track");
+const mainPanel = document.querySelector(".main-panel");
+const themeToggle = document.querySelector("#theme-toggle");
+const themeToggleLabel = document.querySelector("#theme-toggle-label");
+
+const PREFERENCES_KEY = "seoul-corpus-tracker.preferences.v1";
+let preferences = readPreferences();
 
 let clips = [];
 let currentClip = null;
@@ -71,6 +77,51 @@ async function getJson(url) {
 function setStatus(message, state = "ready") {
     status.textContent = message;
     status.dataset.state = state;
+}
+
+function readPreferences() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(PREFERENCES_KEY) || "{}");
+        return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+    } catch {
+        return {};
+    }
+}
+
+function savePreference(key, value) {
+    preferences[key] = value;
+    try {
+        localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+    } catch {
+        // Keep the current session usable when browser storage is unavailable.
+    }
+}
+
+function applyTheme(theme, persist = false) {
+    const selectedTheme = theme === "dark" ? "dark" : "light";
+    const isDark = selectedTheme === "dark";
+    document.documentElement.dataset.theme = selectedTheme;
+    themeToggle.setAttribute("aria-pressed", String(isDark));
+    themeToggle.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} theme`);
+    themeToggleLabel.textContent = isDark ? "Light theme" : "Dark theme";
+    if (persist) savePreference("theme", selectedTheme);
+}
+
+function restorePreferences() {
+    const savedSpeed = Number(preferences.speed);
+    const minimumSpeed = Number(speed.min);
+    const maximumSpeed = Number(speed.max);
+    if (Number.isFinite(savedSpeed) && savedSpeed >= minimumSpeed && savedSpeed <= maximumSpeed) {
+        speed.value = String(savedSpeed);
+    }
+
+    captionsEnabled.checked = preferences.captionsEnabled === true;
+    hideShort.checked = preferences.hideShort !== false;
+    const rate = Number(speed.value);
+    speedValue.textContent = `${rate.toFixed(2)}×`;
+    player.playbackRate = rate;
+    applyTheme(preferences.theme);
+    updateCaption(null);
 }
 
 function createEmptyState(title, message) {
@@ -237,10 +288,14 @@ async function selectClip(name) {
     utteranceRequestId += 1;
     cancelPendingUtteranceStart();
     currentClip = name;
+    savePreference("selectedClip", name);
+    mainPanel.classList.add("has-selection");
     utterances = [];
     activeUtterance = null;
     activeUtteranceEnd = null;
     utteranceButtons.clear();
+    utteranceList.scrollTop = 0;
+    utteranceList.scrollLeft = 0;
 
     requestPlayback(false);
     player.removeAttribute("src");
@@ -335,7 +390,10 @@ async function playUtterance(item) {
     activeUtteranceEnd = item.end;
     utteranceButtons.forEach(button => button.classList.remove("active"));
     const button = utteranceButtons.get(item);
-    if (button) button.classList.add("active");
+    if (button) {
+        button.classList.add("active");
+        scrollActiveUtteranceIntoView(button);
+    }
     updateCaption(item);
 
     const seekAndPlay = async () => {
@@ -373,6 +431,23 @@ function updateCaption(item) {
     caption.textContent = item ? item.text : "";
 }
 
+function scrollActiveUtteranceIntoView(button) {
+    const listBounds = utteranceList.getBoundingClientRect();
+    const buttonBounds = button.getBoundingClientRect();
+    const inset = 6;
+    let scrollDelta = 0;
+
+    if (buttonBounds.top < listBounds.top + inset) {
+        scrollDelta = buttonBounds.top - listBounds.top - inset;
+    } else if (buttonBounds.bottom > listBounds.bottom - inset) {
+        scrollDelta = buttonBounds.bottom - listBounds.bottom + inset;
+    }
+
+    if (scrollDelta) {
+        utteranceList.scrollBy({ top: scrollDelta, behavior: "smooth" });
+    }
+}
+
 function updateActiveUtterance(time) {
     let current = null;
     for (const item of utterances) {
@@ -386,7 +461,10 @@ function updateActiveUtterance(time) {
         activeUtterance = current;
         utteranceButtons.forEach(button => button.classList.remove("active"));
         const button = current ? utteranceButtons.get(current) : null;
-        if (button) button.classList.add("active");
+        if (button) {
+            button.classList.add("active");
+            scrollActiveUtteranceIntoView(button);
+        }
         updateCaption(current);
     }
 }

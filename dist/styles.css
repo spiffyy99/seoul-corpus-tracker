@@ -81,6 +81,30 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     text-transform: uppercase;
 }
 
+.theme-toggle {
+    display: inline-flex;
+    min-height: 40px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    font-size: 0.76rem;
+    font-weight: 750;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.theme-toggle:hover { border-color: var(--blue); background: var(--blue-soft); }
+.theme-icon { width: 17px; height: 17px; flex: 0 0 auto; }
+.theme-icon-sun { display: none; }
+[data-theme="dark"] .theme-icon-moon { display: none; }
+[data-theme="dark"] .theme-icon-sun { display: block; }
+
 .brand-subtitle {
     margin: 2px 0 0;
     color: var(--ink-soft);
@@ -566,6 +590,85 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 
 .attribution-tooltip a { color: #c4d0ff; text-underline-offset: 2px; }
 
+[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #171a25;
+    --paper-deep: #282d3e;
+    --surface: #202536;
+    --ink: #f1f0f7;
+    --ink-soft: #b0b5c8;
+    --line: #3c4358;
+    --coral: #ef7a67;
+    --coral-soft: #49302f;
+    --blue: #9aaaf0;
+    --blue-soft: #303b59;
+    --teal: #68b9a8;
+    --teal-soft: #26433f;
+    --gold: #efcb79;
+    --gold-soft: #433a27;
+    --shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .status-line {
+    border-color: rgba(104, 185, 168, 0.28);
+    background: #233b38;
+    color: #a9dfd2;
+}
+
+[data-theme="dark"] .status-line[data-state="error"] {
+    border-color: rgba(239, 122, 103, 0.38);
+    background: #472c2c;
+    color: #ffc0b4;
+}
+
+[data-theme="dark"] .search-input {
+    background: #191d2b;
+}
+
+[data-theme="dark"] .search-input::placeholder { color: #9ca3b8; }
+[data-theme="dark"] .search-input:focus { border-color: #91a4ee; background: #252a3b; }
+[data-theme="dark"] .clip-button:hover { background: #2b3041; }
+[data-theme="dark"] .clip-button.active { border-color: #b66a5e; background: var(--coral-soft); }
+[data-theme="dark"] .clip-index { color: #c0c4d4; }
+[data-theme="dark"] .clip-arrow { color: #a6acc0; }
+
+[data-theme="dark"] .meta-chip.age { color: #f1d184; }
+[data-theme="dark"] .meta-chip.gender { color: #bac5ff; }
+[data-theme="dark"] .meta-chip.interviewer { color: #a5e2d5; }
+[data-theme="dark"] .meta-chip.segment { color: #ffc0b0; }
+
+[data-theme="dark"] .track-button.primary {
+    border-color: #596fa8;
+    background: #4b6097;
+    color: #fffdf7;
+}
+
+[data-theme="dark"] .track-button.primary:hover { background: #6078b2; }
+
+[data-theme="dark"] .audio-controls {
+    border-color: #3d4355;
+    background: #292e3d;
+    color: #e4e6ef;
+}
+
+[data-theme="dark"] #play-pause:hover:not(:disabled) { background: #d76050; }
+
+[data-theme="dark"] #caption {
+    border-color: #3d4b53;
+    background: linear-gradient(120deg, rgba(50, 92, 82, 0.42), rgba(53, 63, 100, 0.42)), #222a35;
+    color: #e6edf1;
+}
+
+[data-theme="dark"] #caption.disabled { color: #a9b1c4; }
+[data-theme="dark"] #utterance-list { scrollbar-color: #626b82 transparent; }
+[data-theme="dark"] .utterance { border-color: #3c4357; background: #24293a; }
+[data-theme="dark"] .utterance:hover { border-color: #7684ba; background: #2d354b; }
+[data-theme="dark"] .utterance.active { border-color: #9aaaf0; background: #303b59; }
+[data-theme="dark"] .timestamp { color: #b2b8ca; }
+[data-theme="dark"] .utterance-text { color: #f1f0f7; }
+[data-theme="dark"] .utterance.active .utterance-text { color: #d8e0ff; }
+[data-theme="dark"] .empty-state { border-color: #4a5063; }
+
 @media (max-width: 800px) {
     .page-shell { padding-inline: clamp(14px, 3vw, 28px); }
     .intro { grid-template-columns: minmax(0, 1fr) 135px; }
@@ -611,6 +714,11 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     .utterance { grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 11px; }
     .timestamp { font-size: 0.67rem; }
     .utterance-text { font-size: 0.98rem; }
+}
+
+@media (max-width: 380px) {
+    .theme-toggle { width: 40px; padding-inline: 0; }
+    .theme-toggle span { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
