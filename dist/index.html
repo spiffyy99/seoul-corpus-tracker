@@ -46,9 +46,12 @@
 
             <main class="panel main-panel">
                 <div class="transcript-heading">
-                    <div>
+                    <div class="track-title">
                         <p class="clip-context">Now exploring</p>
-                        <h2 id="clip-title" class="clip-title">Choose a recording</h2>
+                        <div class="track-title-line">
+                            <h2 id="clip-title" class="clip-title">Choose a recording</h2>
+                            <div id="speaker-info" aria-label="Speaker and segment details" hidden></div>
+                        </div>
                     </div>
                     <div class="track-actions" aria-label="Track controls">
                         <button id="random-track" class="track-button" type="button" aria-label="Play a random recording" disabled>
@@ -62,7 +65,6 @@
                     </div>
                 </div>
 
-                <div id="speaker-info" aria-label="Speaker and segment details" hidden></div>
                 <audio id="player" preload="metadata"></audio>
 
                 <section class="audio-controls" aria-label="Audio playback">
