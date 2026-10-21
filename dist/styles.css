@@ -231,7 +231,11 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     font-variant-numeric: tabular-nums;
 }
 
-.search-wrap { position: relative; margin: 0 20px 14px; }
+.search-wrap {
+    display: block;
+    min-width: 0;
+    margin: 0 20px 14px;
+}
 .search-wrap svg {
     position: absolute;
     top: 50%;
@@ -304,7 +308,22 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .clip-detail { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 0.72rem; }
 .clip-arrow { color: #9293a0; font-size: 1.1rem; }
 
-.main-panel { padding: clamp(18px, 3vw, 32px); }
+.main-panel {
+    display: flex;
+    height: clamp(500px, calc(100vh - 190px), 920px);
+    min-height: 0;
+    flex-direction: column;
+    padding: clamp(18px, 3vw, 32px);
+}
+.main-panel > * { flex-shrink: 0; }
+.main-panel > section[aria-labelledby="transcript-label"] {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+}
+.transcript-tools,
+.transcript-meta { flex-shrink: 0; }
 .transcript-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .transcript-heading h2 { overflow-wrap: anywhere; }
 .clip-context { margin: 0 0 5px; color: var(--ink-soft); font-size: 0.72rem; font-weight: 750; letter-spacing: 0.13em; text-transform: uppercase; }
@@ -444,7 +463,19 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .transcript-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 13px 0 9px; }
 #utterance-count { margin: 0; color: var(--ink-soft); font-size: 0.76rem; font-variant-numeric: tabular-nums; }
 
-#utterance-list { display: grid; gap: 7px; }
+#utterance-list {
+    display: grid;
+    min-height: 0;
+    flex: 1;
+    align-content: start;
+    gap: 7px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 6px 6px 0;
+    scrollbar-color: #c9c8bd transparent;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+}
 .utterance {
     display: grid;
     width: 100%;
