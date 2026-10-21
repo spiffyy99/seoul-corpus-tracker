@@ -699,7 +699,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     .clip-arrow { display: none; }
     .clip-name { font-size: 0.79rem; }
     .clip-detail { font-size: 0.68rem; }
-    .main-panel { height: clamp(900px, calc(100dvh + 220px), 1300px); padding: 17px 14px; }
+    .main-panel { height: auto; padding: 17px 14px; }
+    .main-panel.has-selection { height: clamp(900px, calc(100dvh + 220px), 1300px); }
     .transcript-heading h2 { font-size: 1.4rem; }
     .track-button { min-height: 37px; padding: 7px 10px; }
     .audio-controls { padding: 12px; }

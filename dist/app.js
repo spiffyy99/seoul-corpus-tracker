@@ -486,6 +486,11 @@ playPause.addEventListener("click", () => {
     requestPlayback(!playbackIntent && (player.paused || player.ended));
 });
 
+themeToggle.addEventListener("click", () => {
+    const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    applyTheme(nextTheme, true);
+});
+
 progress.addEventListener("input", () => {
     seeking = true;
     audioTime.textContent = `${formatTime(Number(progress.value))} / ${formatTime(estimatedDuration)}`;
@@ -505,10 +510,17 @@ speed.addEventListener("input", () => {
     const rate = Number(speed.value);
     player.playbackRate = rate;
     speedValue.textContent = `${rate.toFixed(2)}×`;
+    savePreference("speed", rate);
 });
 
-captionsEnabled.addEventListener("change", () => updateCaption(activeUtterance));
-hideShort.addEventListener("change", renderUtterances);
+captionsEnabled.addEventListener("change", () => {
+    savePreference("captionsEnabled", captionsEnabled.checked);
+    updateCaption(activeUtterance);
+});
+hideShort.addEventListener("change", () => {
+    savePreference("hideShort", hideShort.checked);
+    renderUtterances();
+});
 clipSearch.addEventListener("input", renderClips);
 utteranceSearch.addEventListener("input", renderUtterances);
 nextTrack.addEventListener("click", () => chooseNextTrack());
@@ -559,6 +571,10 @@ async function init() {
         nextTrack.disabled = clips.length === 0;
         randomTrack.disabled = clips.length === 0;
         renderClips();
+        if (typeof preferences.selectedClip === "string" && clips.includes(preferences.selectedClip)) {
+            await selectClip(preferences.selectedClip);
+            return;
+        }
         setStatus(`${clips.length} recordings ready · choose a voice to begin`);
     } catch (error) {
         nextTrack.disabled = true;
@@ -569,4 +585,5 @@ async function init() {
     }
 }
 
+restorePreferences();
 init();
