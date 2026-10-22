@@ -96,9 +96,11 @@
 
                 <div class="settings">
                     <label class="setting"><input id="captions-enabled" type="checkbox"> Show captions</label>
+                    <label class="setting setting-dependent" id="morphology-setting"><input id="morphology-enabled" type="checkbox" disabled> Show morphology</label>
                     <label class="setting"><input id="hide-short" type="checkbox" checked> Hide utterances with 3 characters or fewer</label>
                 </div>
                 <div id="caption" class="disabled" aria-live="polite">Captions are off</div>
+                <div id="morphology-panel" class="morphology-panel" aria-live="polite" hidden></div>
 
                 <section aria-labelledby="transcript-label">
                     <div class="transcript-tools">

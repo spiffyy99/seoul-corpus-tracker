@@ -9,7 +9,10 @@ const clipTitle = document.querySelector("#clip-title");
 const speed = document.querySelector("#speed");
 const speedValue = document.querySelector("#speed-value");
 const captionsEnabled = document.querySelector("#captions-enabled");
+const morphologyEnabled = document.querySelector("#morphology-enabled");
+const morphologySetting = document.querySelector("#morphology-setting");
 const caption = document.querySelector("#caption");
+const morphologyPanel = document.querySelector("#morphology-panel");
 const hideShort = document.querySelector("#hide-short");
 const playPause = document.querySelector("#play-pause");
 const progress = document.querySelector("#progress");
@@ -59,9 +62,19 @@ function parseClipName(clipName) {
 
 function parseEntry(entry) {
     if (Array.isArray(entry)) {
-        return { start: Number(entry[0]), end: Number(entry[1]), text: String(entry[2] ?? "").trim() };
+        return {
+            start: Number(entry[0]),
+            end: Number(entry[1]),
+            text: String(entry[2] ?? "").trim(),
+            morphology: Array.isArray(entry[3]) ? entry[3] : [],
+        };
     }
-    return { start: Number(entry.start), end: Number(entry.end), text: String(entry.text ?? "").trim() };
+    return {
+        start: Number(entry.start),
+        end: Number(entry.end),
+        text: String(entry.text ?? "").trim(),
+        morphology: Array.isArray(entry.morphology) ? entry.morphology : [],
+    };
 }
 
 function formatTime(seconds) {
@@ -118,6 +131,8 @@ function restorePreferences() {
     }
 
     captionsEnabled.checked = preferences.captionsEnabled === true;
+    morphologyEnabled.checked = preferences.morphologyEnabled === true;
+    updateMorphologyAvailability();
     hideShort.checked = preferences.hideShort !== false;
     const rate = Number(speed.value);
     speedValue.textContent = `${rate.toFixed(2)}×`;
@@ -555,14 +570,49 @@ async function playUtterance(item) {
     }
 }
 
+function updateMorphologyAvailability() {
+    const captionsVisible = captionsEnabled.checked;
+    morphologyEnabled.disabled = !captionsVisible;
+    morphologySetting.classList.toggle("is-disabled", !captionsVisible);
+    if (!captionsVisible) morphologyEnabled.checked = false;
+}
+
+function renderMorphology(item) {
+    morphologyPanel.replaceChildren();
+    const shouldShow = captionsEnabled.checked && morphologyEnabled.checked && item;
+    morphologyPanel.hidden = !shouldShow;
+    if (!shouldShow) return;
+
+    const label = document.createElement("span");
+    label.className = "morphology-label";
+    label.textContent = "Morpheme map";
+    const tokens = document.createElement("div");
+    tokens.className = "morpheme-tokens";
+    item.morphology.forEach(([form, tag]) => {
+        const token = document.createElement("span");
+        token.className = "morpheme-token";
+        token.innerHTML = `<b>${escapeHtml(String(form))}</b><small>${escapeHtml(String(tag))}</small>`;
+        tokens.append(token);
+    });
+    morphologyPanel.append(label, tokens);
+}
+
+function escapeHtml(value) {
+    return value.replace(/[&<>'"]/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", "\"": "&quot;"
+    }[character]));
+}
+
 function updateCaption(item) {
     if (!captionsEnabled.checked) {
         caption.textContent = "Captions are off";
         caption.classList.add("disabled");
+        morphologyPanel.hidden = true;
         return;
     }
     caption.classList.remove("disabled");
     caption.textContent = item ? item.text : "";
+    renderMorphology(item);
 }
 
 function scrollActiveUtteranceIntoView(button) {
@@ -665,10 +715,15 @@ speed.addEventListener("input", () => {
 
 captionsEnabled.addEventListener("change", () => {
     savePreference("captionsEnabled", captionsEnabled.checked);
+    updateMorphologyAvailability();
     revealCandidate = null;
     revealedUtterance = null;
     updateCaption(activeUtterance);
     renderUtterances();
+});
+morphologyEnabled.addEventListener("change", () => {
+    savePreference("morphologyEnabled", morphologyEnabled.checked);
+    renderMorphology(activeUtterance);
 });
 hideShort.addEventListener("change", () => {
     savePreference("hideShort", hideShort.checked);

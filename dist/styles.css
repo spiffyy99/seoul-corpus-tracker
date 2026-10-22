@@ -472,6 +472,25 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .settings { display: flex; flex-wrap: wrap; gap: 12px 20px; }
 .setting { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-soft); font-size: 0.8rem; cursor: pointer; }
 .setting input { width: 15px; height: 15px; margin: 0; accent-color: var(--teal); }
+.setting-dependent.is-disabled { color: #a8a9b3; cursor: not-allowed; }
+.setting-dependent input:disabled { cursor: not-allowed; opacity: 0.45; }
+
+.morphology-panel {
+    display: grid;
+    gap: 9px;
+    margin: -1px 0 10px;
+    padding: 12px 14px 13px;
+    border: 1px solid rgba(189, 129, 40, 0.3);
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--gold-soft), rgba(251, 228, 220, 0.62));
+    animation: morphology-in 220ms ease-out;
+}
+.morphology-label { color: var(--gold); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+.morpheme-tokens { display: flex; flex-wrap: wrap; gap: 7px; }
+.morpheme-token { display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 8px 6px; border: 1px solid rgba(189, 129, 40, 0.25); border-radius: 8px; background: rgba(255, 253, 247, 0.76); color: var(--ink); font-family: var(--font-reading); }
+.morpheme-token b { font-size: 1rem; font-weight: 600; }
+.morpheme-token small { color: var(--gold); font-family: var(--font-ui); font-size: 0.63rem; font-weight: 800; letter-spacing: 0.05em; }
+@keyframes morphology-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
 #caption {
     display: flex;
@@ -695,6 +714,9 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 [data-theme="dark"] .search-input {
     background: #191d2b;
 }
+[data-theme="dark"] .setting-dependent.is-disabled { color: #686d80; }
+[data-theme="dark"] .morphology-panel { background: linear-gradient(135deg, #433a27, #49302f); border-color: rgba(239, 203, 121, 0.35); }
+[data-theme="dark"] .morpheme-token { background: rgba(32, 37, 54, 0.68); border-color: rgba(239, 203, 121, 0.3); }
 
 [data-theme="dark"] .search-input::placeholder { color: #9ca3b8; }
 [data-theme="dark"] .search-input:focus { border-color: #91a4ee; background: #252a3b; }
