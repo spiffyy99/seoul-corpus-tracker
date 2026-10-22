@@ -487,9 +487,16 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 }
 .morphology-label { color: var(--gold); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
 .morpheme-tokens { display: flex; flex-wrap: wrap; gap: 7px; }
-.morpheme-token { display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 8px 6px; border: 1px solid rgba(189, 129, 40, 0.25); border-radius: 8px; background: rgba(255, 253, 247, 0.76); color: var(--ink); font-family: var(--font-reading); }
+.morpheme-token { position: relative; display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 8px 6px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 38%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--morpheme-color) 12%, var(--surface)); color: var(--ink); cursor: pointer; font-family: var(--font-reading); transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+.morpheme-token:hover, .morpheme-token:focus-visible, .morpheme-token.is-selected { border-color: var(--morpheme-color); background: color-mix(in srgb, var(--morpheme-color) 20%, var(--surface)); box-shadow: 0 4px 12px color-mix(in srgb, var(--morpheme-color) 20%, transparent); transform: translateY(-2px); }
 .morpheme-token b { font-size: 1rem; font-weight: 600; }
-.morpheme-token small { color: var(--gold); font-family: var(--font-ui); font-size: 0.63rem; font-weight: 800; letter-spacing: 0.05em; }
+.morpheme-token small { color: var(--morpheme-color); font-family: var(--font-ui); font-size: 0.63rem; font-weight: 850; letter-spacing: 0.05em; }
+.morpheme-info { position: absolute; z-index: 5; top: calc(100% + 9px); left: 50%; display: grid; width: min(245px, 72vw); gap: 3px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 45%, var(--line)); border-radius: 11px; background: var(--surface); color: var(--ink); box-shadow: 0 12px 28px rgba(37, 42, 69, 0.18); opacity: 0; pointer-events: none; transform: translate(-50%, -5px) scale(.97); transition: opacity 160ms ease, transform 160ms ease; }
+.morpheme-token:hover .morpheme-info, .morpheme-token:focus-visible .morpheme-info, .morpheme-token.is-selected .morpheme-info { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) scale(1); }
+.morpheme-info strong { font-family: var(--font-ui); font-size: .78rem; }
+.morpheme-info em { color: var(--morpheme-color); font-size: .7rem; font-style: normal; font-weight: 750; }
+.morpheme-info span, .morpheme-info small { color: var(--ink-soft); font-family: var(--font-ui); font-size: .7rem; line-height: 1.4; }
+.morpheme-info small { margin-top: 2px; }
 @keyframes morphology-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
 #caption {

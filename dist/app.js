@@ -43,6 +43,8 @@ let playbackPending = false;
 let playbackRequestId = 0;
 let utteranceRequestId = 0;
 let pendingUtteranceStart = null;
+let posTags = {};
+let highlightedMorpheme = null;
 
 const utteranceCache = new Map();
 const utteranceButtons = new Map();
@@ -581,20 +583,71 @@ function renderMorphology(item) {
     morphologyPanel.replaceChildren();
     const shouldShow = captionsEnabled.checked && morphologyEnabled.checked && item;
     morphologyPanel.hidden = !shouldShow;
+    highlightedMorpheme = null;
     if (!shouldShow) return;
 
     const label = document.createElement("span");
     label.className = "morphology-label";
-    label.textContent = "Morpheme map";
+    label.textContent = "Morpheme map · tap a chip to explore";
     const tokens = document.createElement("div");
     tokens.className = "morpheme-tokens";
-    item.morphology.forEach(([form, tag]) => {
-        const token = document.createElement("span");
+    item.morphology.forEach(([form, tag], index) => {
+        const info = posTags[String(tag)] || {};
+        const token = document.createElement("button");
+        token.type = "button";
         token.className = "morpheme-token";
-        token.innerHTML = `<b>${escapeHtml(String(form))}</b><small>${escapeHtml(String(tag))}</small>`;
+        token.dataset.tag = String(tag);
+        token.style.setProperty("--morpheme-color", morphemeColor(String(tag)));
+        token.setAttribute("aria-label", `${form}, ${info.english || tag}`);
+        const formNode = document.createElement("b");
+        formNode.textContent = String(form);
+        const tagNode = document.createElement("small");
+        tagNode.textContent = String(tag);
+        const popup = document.createElement("span");
+        popup.className = "morpheme-info";
+        popup.setAttribute("role", "tooltip");
+        popup.innerHTML = `<strong>${escapeHtml(info.name || String(tag))}</strong><em>${escapeHtml(info.english || "Part of speech")}</em><span>${escapeHtml(info.meaning || "No description available.")}</span>${info.example ? `<small>Example: ${escapeHtml(info.example)}</small>` : ""}`;
+        token.append(formNode, tagNode, popup);
+        const activate = event => {
+            event.stopPropagation();
+            highlightedMorpheme = highlightedMorpheme === index ? null : index;
+            renderCaptionText(item);
+            tokens.querySelectorAll(".morpheme-token").forEach((other, otherIndex) => other.classList.toggle("is-selected", otherIndex === highlightedMorpheme));
+        };
+        token.addEventListener("mouseenter", () => { highlightedMorpheme = index; renderCaptionText(item); });
+        token.addEventListener("mouseleave", () => { highlightedMorpheme = null; renderCaptionText(item); });
+        token.addEventListener("focus", () => { highlightedMorpheme = index; renderCaptionText(item); });
+        token.addEventListener("blur", () => { highlightedMorpheme = null; renderCaptionText(item); });
+        token.addEventListener("click", activate);
         tokens.append(token);
     });
     morphologyPanel.append(label, tokens);
+}
+
+function morphemeColor(tag) {
+    const hue = [...tag].reduce((total, character) => total + character.charCodeAt(0), 0) % 360;
+    return `hsl(${hue} 62% 48%)`;
+}
+
+function renderCaptionText(item) {
+    caption.replaceChildren();
+    if (!item) return;
+    const text = item.text;
+    let cursor = 0;
+    item.morphology.forEach(([form], index) => {
+        const value = String(form);
+        const start = text.indexOf(value, cursor);
+        if (start < 0) return;
+        caption.append(document.createTextNode(text.slice(cursor, start)));
+        const span = document.createElement("span");
+        span.className = "caption-morpheme";
+        span.textContent = value;
+        span.classList.toggle("is-highlighted", index === highlightedMorpheme);
+        span.style.setProperty("--morpheme-color", morphemeColor(String(item.morphology[index][1])));
+        caption.append(span);
+        cursor = start + value.length;
+    });
+    caption.append(document.createTextNode(text.slice(cursor)));
 }
 
 function escapeHtml(value) {
@@ -611,7 +664,7 @@ function updateCaption(item) {
         return;
     }
     caption.classList.remove("disabled");
-    caption.textContent = item ? item.text : "";
+    renderCaptionText(item);
     renderMorphology(item);
 }
 
@@ -771,7 +824,8 @@ player.addEventListener("error", () => {
 
 async function init() {
     try {
-        const data = await getJson("clips.json");
+        const [data, tagData] = await Promise.all([getJson("clips.json"), getJson("pos_tags.json")]);
+        posTags = tagData.tags || {};
         clips = data
             .filter(name => typeof name === "string")
             .map(name => name.replace(/\.json$/, ""))
