@@ -535,10 +535,18 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     display: grid;
     width: max-content;
     min-width: 100%;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) 0;
     align-items: stretch;
-    gap: 8px;
+    column-gap: 0;
+    interpolate-size: allow-keywords;
+    transition:
+        width 260ms cubic-bezier(0.22, 1, 0.36, 1),
+        grid-template-columns 220ms ease,
+        column-gap 220ms ease;
 }
+
+.utterance-row.has-reveal { grid-template-columns: minmax(0, 1fr) 88px; column-gap: 8px; }
+.utterance-row.is-revealed { width: max-content; }
 
 .utterance-row > .utterance {
     width: 100%;
@@ -546,6 +554,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 }
 
 .reveal-text-button {
+    width: 100%;
     align-self: center;
     min-height: 42px;
     padding: 8px 11px;
@@ -560,6 +569,26 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 }
 
 .reveal-text-button:hover { border-color: var(--blue); background: var(--blue-soft); }
+
+#utterance-list.captions-hidden {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+#utterance-list.captions-hidden > .utterance-row {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+#utterance-list.captions-hidden > .utterance-row.is-revealed {
+    width: max-content;
+    min-width: 100%;
+}
+
+#utterance-list.captions-hidden .utterance { overflow: hidden; }
+
 .utterance:hover { border-color: #bcc6e5; background: #f7f8fc; transform: translateY(-1px); }
 .utterance.active { border-color: #8294d0; background: var(--blue-soft); }
 .timestamp { padding-top: 2px; color: #777b91; font-size: 0.73rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -742,7 +771,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     .transcript-tools { align-items: center; gap: 8px; }
     .transcript-tools label { flex: 0 0 auto; font-size: 0.72rem; white-space: nowrap; }
     .transcript-search { width: auto; min-width: 0; flex: 1; }
-    .utterance-row { gap: 6px; }
+    .utterance-row.has-reveal { grid-template-columns: minmax(0, 1fr) 82px; column-gap: 6px; }
     .utterance { grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 11px; }
     .reveal-text-button { padding-inline: 9px; font-size: 0.72rem; }
     .timestamp { font-size: 0.67rem; }
