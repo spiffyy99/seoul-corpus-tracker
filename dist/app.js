@@ -30,6 +30,8 @@ let currentClip = null;
 let utterances = [];
 let activeUtteranceEnd = null;
 let activeUtterance = null;
+let revealCandidate = null;
+let revealedUtterance = null;
 let selectionId = 0;
 let estimatedDuration = 0;
 let seeking = false;
@@ -293,6 +295,8 @@ async function selectClip(name) {
     utterances = [];
     activeUtterance = null;
     activeUtteranceEnd = null;
+    revealCandidate = null;
+    revealedUtterance = null;
     utteranceButtons.clear();
     utteranceList.scrollTop = 0;
     utteranceList.scrollLeft = 0;
@@ -347,6 +351,12 @@ function getVisibleUtterances() {
     });
 }
 
+function utterancePlayLabel(item, textHidden) {
+    return textHidden
+        ? `Play utterance at ${formatTime(item.start)}. Text is hidden.`
+        : `Play utterance at ${formatTime(item.start)}: ${item.text}`;
+}
+
 function renderUtterances() {
     const filtered = getVisibleUtterances();
     utteranceList.replaceChildren();
@@ -363,22 +373,51 @@ function renderUtterances() {
     }
 
     filtered.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "utterance-row";
+
         const button = document.createElement("button");
         button.type = "button";
         button.className = "utterance";
-        button.setAttribute("aria-label", `Play utterance at ${formatTime(item.start)}: ${item.text}`);
+        const textHidden = !captionsEnabled.checked && revealedUtterance !== item;
+        button.setAttribute("aria-label", utterancePlayLabel(item, textHidden));
         const time = document.createElement("span");
         time.className = "timestamp";
         time.textContent = `${formatTime(item.start)} – ${formatTime(item.end)}`;
         const text = document.createElement("span");
         text.className = "utterance-text";
         text.lang = "ko";
-        text.textContent = item.text;
+        text.textContent = textHidden ? "" : item.text;
         button.append(time, text);
         utteranceButtons.set(item, button);
         if (activeUtterance === item) button.classList.add("active");
         button.addEventListener("click", () => playUtterance(item));
-        utteranceList.append(button);
+        row.append(button);
+
+        if (!captionsEnabled.checked && revealCandidate === item) {
+            const revealButton = document.createElement("button");
+            revealButton.type = "button";
+            revealButton.className = "reveal-text-button";
+            revealButton.textContent = revealedUtterance === item ? "Hide text" : "Reveal text";
+            revealButton.setAttribute(
+                "aria-label",
+                revealedUtterance === item ? "Hide this utterance's text" : "Reveal this utterance's text"
+            );
+            revealButton.addEventListener("click", () => {
+                const shouldReveal = revealedUtterance !== item;
+                revealedUtterance = shouldReveal ? item : null;
+                text.textContent = shouldReveal ? item.text : "";
+                button.setAttribute("aria-label", utterancePlayLabel(item, !shouldReveal));
+                revealButton.textContent = shouldReveal ? "Hide text" : "Reveal text";
+                revealButton.setAttribute(
+                    "aria-label",
+                    shouldReveal ? "Hide this utterance's text" : "Reveal this utterance's text"
+                );
+            });
+            row.append(revealButton);
+        }
+
+        utteranceList.append(row);
     });
 }
 
@@ -386,12 +425,19 @@ async function playUtterance(item) {
     const thisSelection = selectionId;
     const thisUtteranceRequest = ++utteranceRequestId;
     cancelPendingUtteranceStart();
+    if (captionsEnabled.checked) {
+        revealCandidate = null;
+        revealedUtterance = null;
+    } else if (revealCandidate !== item) {
+        revealCandidate = item;
+        revealedUtterance = null;
+    }
     activeUtterance = item;
     activeUtteranceEnd = item.end;
-    utteranceButtons.forEach(button => button.classList.remove("active"));
+    renderUtterances();
     const button = utteranceButtons.get(item);
     if (button) {
-        button.classList.add("active");
+        button.focus({ preventScroll: true });
         scrollActiveUtteranceIntoView(button);
     }
     updateCaption(item);
@@ -483,7 +529,13 @@ function chooseNextTrack(random = false) {
 
 playPause.addEventListener("click", () => {
     if (!player.src) return;
-    requestPlayback(!playbackIntent && (player.paused || player.ended));
+    const shouldPlay = !playbackIntent && (player.paused || player.ended);
+    if (shouldPlay && activeUtteranceEnd === null && revealCandidate !== null) {
+        revealCandidate = null;
+        revealedUtterance = null;
+        renderUtterances();
+    }
+    requestPlayback(shouldPlay);
 });
 
 themeToggle.addEventListener("click", () => {
@@ -500,6 +552,14 @@ progress.addEventListener("change", () => {
     const targetTime = Number(progress.value);
     seeking = false;
     if (Number.isFinite(targetTime)) {
+        if (
+            revealCandidate &&
+            (targetTime < revealCandidate.start || targetTime >= revealCandidate.end)
+        ) {
+            revealCandidate = null;
+            revealedUtterance = null;
+            renderUtterances();
+        }
         player.currentTime = targetTime;
         updateActiveUtterance(targetTime);
     }
@@ -515,7 +575,10 @@ speed.addEventListener("input", () => {
 
 captionsEnabled.addEventListener("change", () => {
     savePreference("captionsEnabled", captionsEnabled.checked);
+    revealCandidate = null;
+    revealedUtterance = null;
     updateCaption(activeUtterance);
+    renderUtterances();
 });
 hideShort.addEventListener("change", () => {
     savePreference("hideShort", hideShort.checked);
