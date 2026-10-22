@@ -6,5 +6,6 @@ dependencies = [
     "flask[async]>=3.0.3",
     "praatio>=6.2.2",
     "workers-runtime-sdk",
-    "workers-py"
+    "workers-py",
+    "kiwipiepy",
 ]

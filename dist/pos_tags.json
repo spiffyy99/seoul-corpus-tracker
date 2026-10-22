@@ -1,0 +1,283 @@
+{
+  "tags": {
+    "NNG": {
+      "name": "일반 명사",
+      "english": "Common Noun",
+      "meaning": "regular words for everyday things like objects, places, concepts",
+      "example": "학교"
+    },
+    "NNP": {
+      "name": "고유 명사",
+      "english": "Proper Noun",
+      "meaning": "names of specific people, places, organizations, brands",
+      "example": "서울"
+    },
+    "NNB": {
+      "name": "의존 명사",
+      "english": "Bound Noun",
+      "meaning": "words that can't stand alone and need another word (것, 수, 바)",
+      "example": "것"
+    },
+    "NP": {
+      "name": "대명사",
+      "english": "Pronoun",
+      "meaning": "words used instead of nouns: I, you, he, she, it, this, that",
+      "example": "나"
+    },
+    "NR": {
+      "name": "수사",
+      "english": "Numeral",
+      "meaning": "numbers and counting words: one, two, first, twenty",
+      "example": "하나"
+    },
+    "VV": {
+      "name": "동사",
+      "english": "Verb",
+      "meaning": "action words: go, eat, see, do, make",
+      "example": "가다"
+    },
+    "VV-I": {
+      "name": "동사 변형 (irregular)",
+      "english": "Verb Variant (Irregular)",
+      "meaning": "irregular verb form with special consonant changes",
+      "example": "듣다"
+    },
+    "VV-R": {
+      "name": "동사 변형 (regular)",
+      "english": "Verb Variant (Regular)",
+      "meaning": "regular verb form with standard conjugation",
+      "example": "먹다"
+    },
+    "VA": {
+      "name": "형용사",
+      "english": "Adjective",
+      "meaning": "descriptive words: good, big, pretty, cold, hot",
+      "example": "좋다"
+    },
+    "VX": {
+      "name": "보조 용언",
+      "english": "Auxiliary Predicate",
+      "meaning": "helper words that add meaning to main verbs/adjectives: want, can, cannot",
+      "example": "있다"
+    },
+    "VCP": {
+      "name": "긍정 지정사",
+      "english": "Positive Copula",
+      "meaning": "is/are - connects a noun to something else"
+    },
+    "VCN": {
+      "name": "부정 지정사",
+      "english": "Negative Copula",
+      "meaning": "is not/are not - negative form of being"
+    },
+    "MM": {
+      "name": "관형사",
+      "english": "Determiner",
+      "meaning": "words that come before nouns to specify them: this, that, new, old",
+      "example": "이"
+    },
+    "MAG": {
+      "name": "일반 부사",
+      "english": "General Adverb",
+      "meaning": "words that describe how something is done: well, very, really, quickly",
+      "example": "잘"
+    },
+    "MAJ": {
+      "name": "접속 부사",
+      "english": "Conjunctive Adverb",
+      "meaning": "transition words: however, therefore, besides",
+      "example": "그러나"
+    },
+    "IC": {
+      "name": "감탄사",
+      "english": "Interjection",
+      "meaning": "exclamations and reactions: oh, wow, yes, ah",
+      "example": "아"
+    },
+    "JKS": {
+      "name": "주격 조사",
+      "english": "Subject Case Particle",
+      "meaning": "particle marking the subject of a sentence: 이, 가"
+    },
+    "JKC": {
+      "name": "보격 조사",
+      "english": "Complement Case Particle",
+      "meaning": "particle used with 'become' to show what something turns into"
+    },
+    "JKG": {
+      "name": "관형격 조사",
+      "english": "Adnominal Case Particle",
+      "meaning": "possession particle: of, 's (의)"
+    },
+    "JKO": {
+      "name": "목적격 조사",
+      "english": "Object Case Particle",
+      "meaning": "particle marking the object of an action: 을, 를"
+    },
+    "JKB": {
+      "name": "부사격 조사",
+      "english": "Adverbial Case Particle",
+      "meaning": "location/direction particles: to, from, at, in, on (에, 에서, 로, 에게)",
+      "example": "에"
+    },
+    "JKV": {
+      "name": "호격 조사",
+      "english": "Vocative Case Particle",
+      "meaning": "particle when calling someone's name: 아, 야"
+    },
+    "JKQ": {
+      "name": "인용격 조사",
+      "english": "Quotative Case Particle",
+      "meaning": "quotation particle: said that, called (라고, 하고)"
+    },
+    "JX": {
+      "name": "보조사",
+      "english": "Auxiliary Particle",
+      "meaning": "emphasis/topic particles: also, only, too (은, 는, 도, 만)",
+      "example": "도"
+    },
+    "JC": {
+      "name": "접속 조사",
+      "english": "Conjunctive Particle",
+      "meaning": "and with nouns: with, and (와, 과, 하고)",
+      "example": "와"
+    },
+    "EP": {
+      "name": "선어말 어미",
+      "english": "Pre-final Ending",
+      "meaning": "endings that come before the final ending: will, did, was (겠, 였, 었)"
+    },
+    "EF": {
+      "name": "종결 어미",
+      "english": "Final Ending",
+      "meaning": "sentence-ending particles: 다, 요, 까, 죠",
+      "example": "요"
+    },
+    "EC": {
+      "name": "연결 어미",
+      "english": "Conjunctive Ending",
+      "meaning": "connecting words between clauses: and, but, because, if (고, 면, 지만, 니까)",
+      "example": "고"
+    },
+    "ETN": {
+      "name": "명사형 어미",
+      "english": "Nominalizing Ending",
+      "meaning": "turns verbs into nouns: doing, reading (기, 음)"
+    },
+    "ETM": {
+      "name": "관형사형 어미",
+      "english": "Adnominalizing Ending",
+      "meaning": "turns words into modifiers: the one who..., the thing that... (ᆫ, 은, 는)"
+    },
+    "XPN": {
+      "name": "체언 접두사",
+      "english": "Noun Prefix",
+      "meaning": "prefixes added to nouns: new, first, fake (새, 첫, 가짜)",
+      "example": "첫"
+    },
+    "XSN": {
+      "name": "명사 파생 접미사",
+      "english": "Noun Derivational Suffix",
+      "meaning": "suffixes that turn other words into nouns: -ness, -ship (적, 성, 님)",
+      "example": "적"
+    },
+    "XSV": {
+      "name": "동사 파생 접미사",
+      "english": "Verb Derivational Suffix",
+      "meaning": "suffixes that turn nouns into verbs: -ize, -ify (하, 되, 시키)",
+      "example": "하"
+    },
+    "XSA": {
+      "name": "형용사 파생 접미사",
+      "english": "Adjective Derivational Suffix",
+      "meaning": "suffixes that turn words into adjectives: -like, -able (스럽, 답다)",
+      "example": "스럽다"
+    },
+    "XSM": {
+      "name": "부사 파생 접미사",
+      "english": "Adverb Derivational Suffix",
+      "meaning": "suffixes that turn words into adverbs: -ly (이, 히)",
+      "example": "이"
+    },
+    "XR": {
+      "name": "어근",
+      "english": "Root Morpheme",
+      "meaning": "the base part of a word before prefixes/suffixes"
+    },
+    "SF": {
+      "name": "마침표/물음표/느낌표",
+      "english": "Sentence-final Punctuation",
+      "meaning": "periods, question marks, exclamation points"
+    },
+    "SP": {
+      "name": "쉼표/가운뎃점/콜론",
+      "english": "Separator Punctuation",
+      "meaning": "commas, semicolons, colons"
+    },
+    "SS": {
+      "name": "따옴표/괄호",
+      "english": "Quotation/Bracket",
+      "meaning": "quotation marks and brackets"
+    },
+    "SE": {
+      "name": "줄임표",
+      "english": "Ellipsis",
+      "meaning": "ellipsis dots (...)"
+    },
+    "SO": {
+      "name": "붙임표/물결표",
+      "english": "Hyphen/Dash",
+      "meaning": "hyphens and dashes"
+    },
+    "SL": {
+      "name": "외국어/알파벳",
+      "english": "Foreign Word/Alphabet",
+      "meaning": "English words and alphabetic characters"
+    },
+    "SH": {
+      "name": "한자",
+      "english": "Chinese Character",
+      "meaning": "Chinese characters used in Korean"
+    },
+    "SN": {
+      "name": "숫자",
+      "english": "Number",
+      "meaning": "Arabic numerals 0-9"
+    },
+    "W_URL": {
+      "name": "URL/이메일 주소",
+      "english": "Web URL/Email",
+      "meaning": "website URLs and email addresses"
+    },
+    "W_MENTION": {
+      "name": "SNS 멘션/@태그",
+      "english": "Social Media Mention",
+      "meaning": "@username mentions in social media"
+    },
+    "W_HASHTAG": {
+      "name": "SNS 해시태그/#태그",
+      "english": "Social Media Hashtag",
+      "meaning": "#hashtag tags in social media"
+    },
+    "Z_CODA": {
+      "name": "구어체 덧붙은 받침",
+      "english": "Slang Tail Consonant",
+      "meaning": "extra sounds added in casual speech (like -m in thing-m)"
+    },
+    "NF": {
+      "name": "명사 추정 범주",
+      "english": "Presumed Noun",
+      "meaning": "unknown words guessed to be nouns"
+    },
+    "NV": {
+      "name": "용언 추정 범주",
+      "english": "Presumed Predicate",
+      "meaning": "unknown words guessed to be verbs or adjectives"
+    },
+    "NA": {
+      "name": "분석 불가능 단어",
+      "english": "Unknown/Unanalyzable Word",
+      "meaning": "words that can't be analyzed at all"
+    }
+  }
+}
