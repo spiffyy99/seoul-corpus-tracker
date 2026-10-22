@@ -601,13 +601,11 @@ function renderMorphology(item) {
         token.setAttribute("aria-label", `${form}, ${info.english || tag}`);
         const formNode = document.createElement("b");
         formNode.textContent = String(form);
-        const tagNode = document.createElement("small");
-        tagNode.textContent = String(tag);
         const popup = document.createElement("span");
         popup.className = "morpheme-info";
         popup.setAttribute("role", "tooltip");
         popup.innerHTML = `<strong>${escapeHtml(info.name || String(tag))}</strong><em>${escapeHtml(info.english || "Part of speech")}</em><span>${escapeHtml(info.meaning || "No description available.")}</span>${info.example ? `<small>Example: ${escapeHtml(info.example)}</small>` : ""}`;
-        token.append(formNode, tagNode, popup);
+        token.append(formNode, popup);
         const activate = event => {
             event.stopPropagation();
             highlightedMorpheme = highlightedMorpheme === index ? null : index;
@@ -624,9 +622,15 @@ function renderMorphology(item) {
     morphologyPanel.append(label, tokens);
 }
 
+const MORPHEME_COLORS = [
+    "#c2415d", "#2563a8", "#0f766e", "#9a6700", "#7c3aed",
+    "#b45309", "#047857", "#be185d", "#4338ca", "#15803d",
+    "#c026d3", "#0369a1", "#a16207", "#6d28d9", "#0f766e"
+];
+
 function morphemeColor(tag) {
-    const hue = [...tag].reduce((total, character) => total + character.charCodeAt(0), 0) % 360;
-    return `hsl(${hue} 62% 48%)`;
+    const hash = [...tag].reduce((total, character) => total * 31 + character.charCodeAt(0), 0);
+    return MORPHEME_COLORS[Math.abs(hash) % MORPHEME_COLORS.length];
 }
 
 function renderCaptionText(item) {
@@ -636,16 +640,17 @@ function renderCaptionText(item) {
     let cursor = 0;
     item.morphology.forEach(([form], index) => {
         const value = String(form);
-        const start = text.indexOf(value, cursor);
+        const matchValue = value.trim();
+        const start = matchValue ? text.indexOf(matchValue, cursor) : -1;
         if (start < 0) return;
         caption.append(document.createTextNode(text.slice(cursor, start)));
         const span = document.createElement("span");
         span.className = "caption-morpheme";
-        span.textContent = value;
+        span.textContent = matchValue;
         span.classList.toggle("is-highlighted", index === highlightedMorpheme);
         span.style.setProperty("--morpheme-color", morphemeColor(String(item.morphology[index][1])));
         caption.append(span);
-        cursor = start + value.length;
+        cursor = start + matchValue.length;
     });
     caption.append(document.createTextNode(text.slice(cursor)));
 }

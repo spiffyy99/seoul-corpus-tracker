@@ -225,8 +225,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 
 .panel {
     min-width: 0;
-    overflow: hidden;
-    border: 1px solid var(--line);
+  overflow: visible;
+  border: 1px solid var(--line);
     border-radius: 18px;
     background: var(--surface);
     box-shadow: var(--shadow);
@@ -475,7 +475,10 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .setting-dependent.is-disabled { color: #a8a9b3; cursor: not-allowed; }
 .setting-dependent input:disabled { cursor: not-allowed; opacity: 0.45; }
 
+.morphology-panel[hidden] { display: none; }
 .morphology-panel {
+    position: relative;
+    z-index: 20;
     display: grid;
     gap: 9px;
     margin: -1px 0 10px;
@@ -490,9 +493,11 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .morpheme-token { position: relative; display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 8px 6px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 38%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--morpheme-color) 12%, var(--surface)); color: var(--ink); cursor: pointer; font-family: var(--font-reading); transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
 .morpheme-token:hover, .morpheme-token:focus-visible, .morpheme-token.is-selected { border-color: var(--morpheme-color); background: color-mix(in srgb, var(--morpheme-color) 20%, var(--surface)); box-shadow: 0 4px 12px color-mix(in srgb, var(--morpheme-color) 20%, transparent); transform: translateY(-2px); }
 .morpheme-token b { font-size: 1rem; font-weight: 600; }
-.morpheme-token small { color: var(--morpheme-color); font-family: var(--font-ui); font-size: 0.63rem; font-weight: 850; letter-spacing: 0.05em; }
-.morpheme-info { position: absolute; z-index: 5; top: calc(100% + 9px); left: 50%; display: grid; width: min(245px, 72vw); gap: 3px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 45%, var(--line)); border-radius: 11px; background: var(--surface); color: var(--ink); box-shadow: 0 12px 28px rgba(37, 42, 69, 0.18); opacity: 0; pointer-events: none; transform: translate(-50%, -5px) scale(.97); transition: opacity 160ms ease, transform 160ms ease; }
+.morpheme-info { position: absolute; z-index: 1000; top: calc(100% + 9px); left: 50%; display: grid; width: min(245px, 72vw); gap: 3px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 45%, var(--line)); border-radius: 11px; background: var(--surface); color: var(--ink); box-shadow: 0 12px 28px rgba(37, 42, 69, 0.18); opacity: 0; pointer-events: none; transform: translate(-50%, -5px) scale(.97); transition: opacity 160ms ease, transform 160ms ease; }
+.morpheme-token:first-child .morpheme-info { left: 0; transform: translate(0, -5px) scale(.97); }
+.morpheme-token:last-child .morpheme-info { left: auto; right: 0; transform: translate(0, -5px) scale(.97); }
 .morpheme-token:hover .morpheme-info, .morpheme-token:focus-visible .morpheme-info, .morpheme-token.is-selected .morpheme-info { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) scale(1); }
+.morpheme-token:first-child:hover .morpheme-info, .morpheme-token:first-child:focus-visible .morpheme-info, .morpheme-token:first-child.is-selected .morpheme-info, .morpheme-token:last-child:hover .morpheme-info, .morpheme-token:last-child:focus-visible .morpheme-info, .morpheme-token:last-child.is-selected .morpheme-info { transform: translate(0, 0) scale(1); }
 .morpheme-info strong { font-family: var(--font-ui); font-size: .78rem; }
 .morpheme-info em { color: var(--morpheme-color); font-size: .7rem; font-style: normal; font-weight: 750; }
 .morpheme-info span, .morpheme-info small { color: var(--ink-soft); font-family: var(--font-ui); font-size: .7rem; line-height: 1.4; }
@@ -520,6 +525,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 }
 
 #caption.disabled { color: #858797; font-family: var(--font-ui); font-size: 0.86rem; }
+.caption-morpheme { border-radius: 0.28em; background: color-mix(in srgb, var(--morpheme-color) 16%, transparent); box-shadow: inset 0 -0.18em color-mix(in srgb, var(--morpheme-color) 48%, transparent); transition: background 180ms ease, box-shadow 180ms ease, color 180ms ease; }
+.caption-morpheme.is-highlighted { background: color-mix(in srgb, var(--morpheme-color) 32%, transparent); box-shadow: inset 0 -0.42em color-mix(in srgb, var(--morpheme-color) 72%, transparent); color: color-mix(in srgb, var(--morpheme-color) 72%, var(--ink)); }
 .transcript-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 7px 0 4px; }
 .transcript-tools label { color: var(--ink-soft); font-size: 0.8rem; font-weight: 650; }
 .transcript-search { width: min(250px, 55%); margin: 0; }
