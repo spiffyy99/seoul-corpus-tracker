@@ -357,6 +357,35 @@ function utterancePlayLabel(item, textHidden) {
         : `Play utterance at ${formatTime(item.start)}: ${item.text}`;
 }
 
+function utteranceTextNeedsExpansion(row, button, text, baselineWidth) {
+    if (!text.textContent) return false;
+
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    const textWidth = range.getBoundingClientRect().width;
+    const rowStyle = window.getComputedStyle(row);
+    const buttonStyle = window.getComputedStyle(button);
+    const controlWidth = Number.parseFloat(rowStyle.getPropertyValue("--reveal-control-width")) || 0;
+    const controlGap = Number.parseFloat(rowStyle.getPropertyValue("--reveal-control-gap")) || 0;
+    const timestampWidth = Number.parseFloat(buttonStyle.gridTemplateColumns) || 0;
+    const innerGap = Number.parseFloat(buttonStyle.columnGap) || 0;
+    const buttonPaddingAndBorder = [
+        "paddingLeft",
+        "paddingRight",
+        "borderLeftWidth",
+        "borderRightWidth"
+    ].reduce((total, property) => total + (Number.parseFloat(buttonStyle[property]) || 0), 0);
+    const availableTextWidth =
+        baselineWidth -
+        controlWidth -
+        controlGap -
+        timestampWidth -
+        innerGap -
+        buttonPaddingAndBorder;
+
+    return textWidth > availableTextWidth + 1;
+}
+
 function clearUtteranceTextAfterResize(row, text, item) {
     let fallbackTimer;
     const finish = () => {
@@ -380,12 +409,16 @@ function syncUtteranceReveal(item) {
     const text = button.querySelector(".utterance-text");
     const textHidden = !captionsEnabled.checked && revealedUtterance !== item;
     const shouldShowReveal = !captionsEnabled.checked && revealCandidate === item;
+    const wasExpanded = row.classList.contains("is-revealed");
     const otherRowWidths = [...utteranceList.querySelectorAll(".utterance-row")]
         .filter(otherRow => otherRow !== row)
         .map(otherRow => otherRow.getBoundingClientRect().width);
+    const listStyle = window.getComputedStyle(utteranceList);
     const baselineWidth = otherRowWidths.length
         ? Math.max(...otherRowWidths)
-        : utteranceList.clientWidth;
+        : utteranceList.clientWidth -
+            (Number.parseFloat(listStyle.paddingLeft) || 0) -
+            (Number.parseFloat(listStyle.paddingRight) || 0);
     const deferHidingText =
         textHidden &&
         text.textContent.length > 0 &&
@@ -395,7 +428,11 @@ function syncUtteranceReveal(item) {
     if (!deferHidingText) text.textContent = textHidden ? "" : item.text;
     button.setAttribute("aria-label", utterancePlayLabel(item, textHidden));
     row.classList.toggle("has-reveal", shouldShowReveal);
-    row.classList.toggle("is-revealed", shouldShowReveal && revealedUtterance === item);
+    const shouldExpand =
+        shouldShowReveal &&
+        revealedUtterance === item &&
+        (wasExpanded || utteranceTextNeedsExpansion(row, button, text, baselineWidth));
+    row.classList.toggle("is-revealed", shouldExpand);
     if (deferHidingText) clearUtteranceTextAfterResize(row, text, item);
 
     let revealButton = row.querySelector(".reveal-text-button");

@@ -532,6 +532,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 }
 
 .utterance-row {
+    --reveal-control-width: 88px;
+    --reveal-control-gap: 8px;
     display: grid;
     width: max-content;
     min-width: 100%;
@@ -545,7 +547,10 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
         column-gap 220ms ease;
 }
 
-.utterance-row.has-reveal { grid-template-columns: minmax(0, 1fr) 88px; column-gap: 8px; }
+.utterance-row.has-reveal {
+    grid-template-columns: minmax(0, 1fr) var(--reveal-control-width);
+    column-gap: var(--reveal-control-gap);
+}
 .utterance-row.is-revealed { width: max-content; }
 
 .utterance-row > .utterance {
@@ -592,7 +597,15 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .utterance:hover { border-color: #bcc6e5; background: #f7f8fc; transform: translateY(-1px); }
 .utterance.active { border-color: #8294d0; background: var(--blue-soft); }
 .timestamp { padding-top: 2px; color: #777b91; font-size: 0.73rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.utterance-text { color: #30334a; font-family: var(--font-reading); font-size: 1rem; line-height: 1.65; white-space: pre; }
+.utterance-text {
+    display: block;
+    min-height: 1.65em;
+    color: #30334a;
+    font-family: var(--font-reading);
+    font-size: 1rem;
+    line-height: 1.65;
+    white-space: pre;
+}
 .utterance.active .utterance-text { color: #293b77; }
 
 .empty-state {
@@ -771,7 +784,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     .transcript-tools { align-items: center; gap: 8px; }
     .transcript-tools label { flex: 0 0 auto; font-size: 0.72rem; white-space: nowrap; }
     .transcript-search { width: auto; min-width: 0; flex: 1; }
-    .utterance-row.has-reveal { grid-template-columns: minmax(0, 1fr) 82px; column-gap: 6px; }
+    .utterance-row { --reveal-control-width: 82px; --reveal-control-gap: 6px; }
     .utterance { grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 11px; }
     .reveal-text-button { padding-inline: 9px; font-size: 0.72rem; }
     .timestamp { font-size: 0.67rem; }
