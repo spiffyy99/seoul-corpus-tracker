@@ -531,12 +531,12 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 #caption.disabled { color: #858797; font-family: var(--font-ui); font-size: 0.86rem; }
 .caption-morpheme { position: relative; display: inline-block; border-radius: 0.28em; background: color-mix(in srgb, var(--morpheme-color) 16%, transparent); box-shadow: inset 0 -0.18em color-mix(in srgb, var(--morpheme-color) 48%, transparent); cursor: pointer; transition: background 180ms ease, box-shadow 180ms ease, color 180ms ease; }
 .caption-morpheme.is-highlighted, .caption-morpheme:hover { background: color-mix(in srgb, var(--morpheme-color) 32%, transparent); box-shadow: inset 0 -0.42em color-mix(in srgb, var(--morpheme-color) 72%, transparent); color: color-mix(in srgb, var(--morpheme-color) 72%, var(--ink)); }
-.caption-morpheme-popup { position: absolute; z-index: 2147483647; top: calc(100% + 12px); left: 50%; display: flex; width: max-content; max-width: min(760px, calc(100vw - 28px)); gap: 8px; padding: 9px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 45%, var(--line)); border-radius: 12px; background: var(--surface); box-shadow: 0 16px 36px rgba(0, 0, 0, .28); opacity: 0; pointer-events: none; transform: translate(-50%, -5px) scale(.98); transition: opacity 160ms ease, transform 160ms ease; }
+ .caption-morpheme-popup { position: absolute; z-index: 2147483647; top: calc(100% + 12px); left: 50%; display: flex; width: max-content; max-width: min(760px, calc(100vw - 28px)); gap: 8px; padding: 9px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 45%, var(--line)); border-radius: 12px; background: var(--surface); box-shadow: 0 16px 36px rgba(0, 0, 0, .28); opacity: 0; pointer-events: none; transform: translate(-50%, -5px) scale(.98); transition: opacity 160ms ease, transform 160ms ease; }
 .caption-morpheme-popup::before { position: absolute; top: -6px; left: 50%; width: 10px; height: 10px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); background: var(--surface); content: ""; transform: translateX(-50%) rotate(45deg); }
 .caption-morpheme:hover .caption-morpheme-popup, .caption-morpheme.is-highlighted .caption-morpheme-popup { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) scale(1); }
 .caption-morpheme.is-dismissed .caption-morpheme-popup { opacity: 0 !important; pointer-events: none !important; transform: translate(-50%, -5px) scale(.98) !important; }
 .caption-morpheme.is-dismissed:hover .caption-morpheme-popup { opacity: 0 !important; pointer-events: none !important; }
-@media (max-width: 650px) { .caption-morpheme.is-dismissed .caption-morpheme-popup { transform: translateY(5px) scale(.98) !important; } }
+ @media (max-width: 650px) { .caption-morpheme.is-dismissed .caption-morpheme-popup { transform: translateY(5px) scale(.98) !important; } }
   .caption-morpheme-card { display: grid; min-width: 170px; max-width: 220px; gap: 2px; padding: 8px 10px; border-left: 3px solid var(--morpheme-color); text-align: left; word-spacing: normal; letter-spacing: normal; }
 .caption-morpheme-card strong { color: var(--morpheme-color); font-family: var(--font-reading); font-size: 1.05rem; }
 .caption-morpheme-card b { color: var(--ink); font-family: var(--font-ui); font-size: .73rem; }
@@ -544,7 +544,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .caption-morpheme-card span, .caption-morpheme-card small { color: var(--ink-soft); font-family: var(--font-ui); font-size: .68rem; line-height: 1.35; }
 .caption-morpheme-card small { margin-top: 2px; }
 .caption-morpheme-popup .caption-morpheme-card + .caption-morpheme-card { border-left-color: color-mix(in srgb, var(--morpheme-color) 55%, var(--blue)); }
-@media (max-width: 650px) { .caption-morpheme-popup { position: fixed; top: auto; bottom: 12px; left: 14px; right: 14px; width: auto; max-width: none; transform: translateY(5px) scale(.98); } .caption-morpheme:hover .caption-morpheme-popup, .caption-morpheme.is-highlighted .caption-morpheme-popup { transform: translateY(0) scale(1); } .caption-morpheme-popup::before { display: none; } .caption-morpheme-card { min-width: 0; flex: 1 1 0; } }
+ @media (max-width: 650px) { .caption-morpheme-popup { position: absolute; top: calc(100% + 8px); bottom: auto; left: var(--caption-popup-left, 0px); right: auto; width: min(320px, calc(100vw - 28px)); max-width: none; box-sizing: border-box; transform: translateY(-5px) scale(.98); } .caption-morpheme:hover .caption-morpheme-popup, .caption-morpheme.is-highlighted .caption-morpheme-popup { transform: translateY(0) scale(1); } .caption-morpheme-popup::before { display: none; } .caption-morpheme-card { min-width: 0; flex: 1 1 0; } }
 .transcript-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 7px 0 4px; }
 .transcript-tools label { color: var(--ink-soft); font-size: 0.8rem; font-weight: 650; }
 .transcript-search { width: min(250px, 55%); margin: 0; }
@@ -579,7 +579,6 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     background: #fffef9;
     cursor: pointer;
     text-align: left;
-    transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
 }
 
 .utterance-row {
@@ -612,6 +611,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .reveal-text-button {
     width: 100%;
     align-self: center;
+    min-width: 0;
     min-height: 42px;
     padding: 8px 11px;
     border: 1px solid #cbd2e7;
@@ -621,9 +621,13 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     cursor: pointer;
     font-size: 0.76rem;
     font-weight: 750;
+    overflow: hidden;
+    opacity: 1;
+    transition: opacity 140ms ease;
     white-space: nowrap;
 }
 
+.reveal-text-button.is-entering { opacity: 0; pointer-events: none; }
 .reveal-text-button:hover { border-color: var(--blue); background: var(--blue-soft); }
 
 #utterance-list.captions-hidden {
@@ -645,7 +649,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 
 #utterance-list.captions-hidden .utterance { overflow: hidden; }
 
-.utterance:hover { border-color: #bcc6e5; background: #f7f8fc; transform: translateY(-1px); }
+.utterance:hover { border-color: #bcc6e5; background: #f7f8fc; }
 .utterance.active { border-color: #8294d0; background: var(--blue-soft); }
 .timestamp { padding-top: 2px; color: #777b91; font-size: 0.73rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .utterance-text {

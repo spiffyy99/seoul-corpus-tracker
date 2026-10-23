@@ -44,6 +44,7 @@ let playbackPending = false;
 let playbackRequestId = 0;
 let utteranceRequestId = 0;
 let pendingUtteranceStart = null;
+let pendingUtteranceSeek = null;
 let posTags = {};
 let highlightedMorpheme = null;
 
@@ -277,6 +278,26 @@ function cancelPendingUtteranceStart() {
     pendingUtteranceStart = null;
 }
 
+function revealButtonAfterSlotOpens(row, button) {
+    let fallbackTimer;
+    const finish = () => {
+        row.removeEventListener("transitionend", onTransitionEnd);
+        window.clearTimeout(fallbackTimer);
+        if (button.isConnected && row.classList.contains("has-reveal")) {
+            button.disabled = false;
+            button.removeAttribute("aria-hidden");
+            button.classList.remove("is-entering");
+        }
+    };
+    const onTransitionEnd = event => {
+        if (event.target === row && event.propertyName === "grid-template-columns") finish();
+    };
+
+    row.addEventListener("transitionend", onTransitionEnd);
+    const fallbackDelay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 30 : 280;
+    fallbackTimer = window.setTimeout(finish, fallbackDelay);
+}
+
 function renderSpeakerInfo(name) {
     speakerInfo.replaceChildren();
     const info = parseClipName(name);
@@ -307,6 +328,7 @@ async function selectClip(name) {
     const thisSelection = ++selectionId;
     utteranceRequestId += 1;
     cancelPendingUtteranceStart();
+    pendingUtteranceSeek = null;
     currentClip = name;
     savePreference("selectedClip", name);
     mainPanel.classList.add("has-selection");
@@ -476,13 +498,16 @@ function syncUtteranceReveal(item) {
     if (!revealButton) {
         revealButton = document.createElement("button");
         revealButton.type = "button";
-        revealButton.className = "reveal-text-button";
+        revealButton.className = "reveal-text-button is-entering";
+        revealButton.disabled = true;
+        revealButton.setAttribute("aria-hidden", "true");
         revealButton.addEventListener("click", () => {
             const shouldReveal = revealedUtterance !== item;
             revealedUtterance = shouldReveal ? item : null;
             syncUtteranceReveal(item);
         });
         row.append(revealButton);
+        revealButtonAfterSlotOpens(row, revealButton);
     }
 
     revealButton.textContent = revealedUtterance === item ? "Hide text" : "Reveal text";
@@ -538,6 +563,7 @@ async function playUtterance(item) {
     const thisSelection = selectionId;
     const thisUtteranceRequest = ++utteranceRequestId;
     cancelPendingUtteranceStart();
+    pendingUtteranceSeek = null;
     const previousRevealCandidate = revealCandidate;
     if (captionsEnabled.checked) {
         revealCandidate = null;
@@ -575,9 +601,17 @@ async function playUtterance(item) {
             thisUtteranceRequest !== utteranceRequestId
         ) return;
         try {
+            pendingUtteranceSeek = {
+                start: item.start,
+                selectionId: thisSelection,
+                requestId: thisUtteranceRequest,
+            };
             player.currentTime = item.start;
             requestPlayback(true);
         } catch (error) {
+            if (pendingUtteranceSeek?.requestId === thisUtteranceRequest) {
+                pendingUtteranceSeek = null;
+            }
             activeUtteranceEnd = null;
             setStatus(`Playback failed: ${error.message}`, "error");
         }
@@ -613,12 +647,34 @@ function morphologyDescription(form, tag) {
     return card;
 }
 
+function positionCaptionMorphemePopup(span, popup) {
+    if (window.innerWidth > 650) {
+        popup.style.removeProperty("--caption-popup-left");
+        return;
+    }
+
+    const anchor = span.getBoundingClientRect();
+    const popupWidth = popup.getBoundingClientRect().width;
+    if (!popupWidth) return;
+
+    const viewportMargin = 14;
+    const desiredLeft = anchor.left + anchor.width / 2 - popupWidth / 2;
+    const left = Math.max(
+        viewportMargin,
+        Math.min(desiredLeft, window.innerWidth - viewportMargin - popupWidth)
+    );
+    popup.style.setProperty("--caption-popup-left", `${left - anchor.left}px`);
+}
+
 function bindCaptionMorpheme(span, item, covering) {
     const popup = document.createElement("span");
     popup.className = "caption-morpheme-popup";
     popup.setAttribute("role", "tooltip");
     covering.forEach(range => popup.append(morphologyDescription(range.form, range.tag)));
     span.append(popup);
+    if (span.classList.contains("is-highlighted")) {
+        positionCaptionMorphemePopup(span, popup);
+    }
 
     const clear = () => {
         const wasHighlighted = highlightedMorpheme !== null;
@@ -648,7 +704,7 @@ function bindCaptionMorpheme(span, item, covering) {
     });
     span.addEventListener("pointerdown", event => {
         if (event.pointerType === "touch") {
-            event.preventDefault();
+            if (event.target.closest?.(".caption-morpheme-popup")) return;
             if (highlightedMorpheme === covering[0].index) clear();
             else sync(covering[0].index);
         }
@@ -660,8 +716,13 @@ function bindCaptionMorpheme(span, item, covering) {
         }
     });
   }
+
+window.addEventListener("resize", () => {
+    const popup = document.querySelector(".caption-morpheme.is-highlighted .caption-morpheme-popup");
+    if (popup?.parentElement) positionCaptionMorphemePopup(popup.parentElement, popup);
+});
   
-  document.addEventListener("pointerdown", event => {
+  document.addEventListener("click", event => {
   if (event.target.closest?.(".caption-morpheme")) return;
   if (highlightedMorpheme !== null) {
   highlightedMorpheme = null;
@@ -827,6 +888,7 @@ progress.addEventListener("change", () => {
     const targetTime = Number(progress.value);
     seeking = false;
     if (Number.isFinite(targetTime)) {
+        pendingUtteranceSeek = null;
         if (
             revealCandidate &&
             (targetTime < revealCandidate.start || targetTime >= revealCandidate.end)
@@ -877,6 +939,20 @@ downloadTrack.addEventListener("click", event => {
 player.addEventListener("timeupdate", () => {
     if (!currentClip || !utterances.length) return;
     const time = player.currentTime;
+    if (pendingUtteranceSeek) {
+        const pending = pendingUtteranceSeek;
+        const requestIsCurrent =
+            pending.selectionId === selectionId &&
+            pending.requestId === utteranceRequestId;
+        if (!requestIsCurrent) {
+            pendingUtteranceSeek = null;
+        } else if (player.seeking || time < pending.start) {
+            updateAudioControls();
+            return;
+        } else {
+            pendingUtteranceSeek = null;
+        }
+    }
     if (activeUtteranceEnd !== null && time >= activeUtteranceEnd) {
         const end = activeUtteranceEnd;
         activeUtteranceEnd = null;
@@ -898,12 +974,14 @@ player.addEventListener("playing", () => {
 player.addEventListener("pause", updateAudioControls);
 player.addEventListener("ended", () => {
     activeUtteranceEnd = null;
+    pendingUtteranceSeek = null;
     playbackIntent = false;
     playbackPending = false;
     updateAudioControls();
 });
 player.addEventListener("error", () => {
     playbackRequestId += 1;
+    pendingUtteranceSeek = null;
     playbackIntent = false;
     playbackPending = false;
     updateAudioControls();
