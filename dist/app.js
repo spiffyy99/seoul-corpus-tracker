@@ -21,6 +21,7 @@ const speakerInfo = document.querySelector("#speaker-info");
 const libraryCount = document.querySelector("#library-count");
 const nextTrack = document.querySelector("#next-track");
 const randomTrack = document.querySelector("#random-track");
+const downloadTrack = document.querySelector("#download-track");
 const mainPanel = document.querySelector(".main-panel");
 const themeToggle = document.querySelector("#theme-toggle");
 const themeToggleLabel = document.querySelector("#theme-toggle-label");
@@ -315,6 +316,8 @@ async function selectClip(name) {
     revealCandidate = null;
     revealedUtterance = null;
     highlightedMorpheme = null;
+    morphologyPanel.replaceChildren();
+    morphologyPanel.hidden = true;
     utteranceButtons.clear();
     utteranceList.scrollTop = 0;
     utteranceList.scrollLeft = 0;
@@ -322,6 +325,10 @@ async function selectClip(name) {
     requestPlayback(false);
     player.removeAttribute("src");
     player.load();
+    downloadTrack.removeAttribute("href");
+    downloadTrack.removeAttribute("download");
+    downloadTrack.classList.add("is-disabled");
+    downloadTrack.setAttribute("aria-disabled", "true");
     resetAudioControls();
     caption.textContent = captionsEnabled.checked ? "" : "Captions are off";
     caption.classList.toggle("disabled", !captionsEnabled.checked);
@@ -348,7 +355,12 @@ async function selectClip(name) {
         estimatedDuration = cached.length;
         renderUtterances();
         setEstimatedDuration();
-        player.src = `/api/clips/${encodeURIComponent(name)}/play`;
+        const audioUrl = `/api/clips/${encodeURIComponent(name)}/play`;
+        player.src = audioUrl;
+        downloadTrack.href = audioUrl;
+        downloadTrack.download = `${name}.opus`;
+        downloadTrack.classList.remove("is-disabled");
+        downloadTrack.setAttribute("aria-disabled", "false");
         player.playbackRate = Number(speed.value);
         player.load();
         playPause.disabled = estimatedDuration <= 0;
@@ -637,7 +649,12 @@ function renderMorphology(item) {
                 token.classList.remove("is-selected");
             }
         });
-        token.addEventListener("click", activate);
+        token.addEventListener("pointerdown", event => {
+            if (event.pointerType === "touch") activate(event);
+        });
+        token.addEventListener("click", event => {
+            if (event.detail === 0 || event.pointerType !== "touch") activate(event);
+        });
         tokens.append(token);
     });
     morphologyPanel.append(label, tokens);
@@ -663,7 +680,7 @@ function renderCaptionText(item) {
     caption.replaceChildren();
     if (!item) return;
     const text = item.text;
-    if (!morphologyEnabled.checked) {
+    if (!captionsEnabled.checked || !morphologyEnabled.checked) {
         caption.textContent = text;
         return;
     }
@@ -838,6 +855,9 @@ clipSearch.addEventListener("input", renderClips);
 utteranceSearch.addEventListener("input", renderUtterances);
 nextTrack.addEventListener("click", () => chooseNextTrack());
 randomTrack.addEventListener("click", () => chooseNextTrack(true));
+downloadTrack.addEventListener("click", event => {
+    if (!downloadTrack.href) event.preventDefault();
+});
 
 player.addEventListener("timeupdate", () => {
     const time = player.currentTime;
