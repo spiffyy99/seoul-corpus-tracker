@@ -536,6 +536,7 @@ async function playUtterance(item) {
     highlightedMorpheme = null;
     morphologyPanel.replaceChildren();
     morphologyPanel.hidden = true;
+    renderCaptionText(item);
     activeUtteranceEnd = item.end;
     if (previousRevealCandidate && previousRevealCandidate !== revealCandidate) {
         syncUtteranceReveal(previousRevealCandidate);
@@ -598,7 +599,7 @@ function renderMorphology(item) {
 
     const label = document.createElement("span");
     label.className = "morphology-label";
-    label.textContent = "Morpheme map · tap a chip to explore";
+    label.textContent = "Morpheme Map · Touch to explore";
     const tokens = document.createElement("div");
     tokens.className = "morpheme-tokens";
     item.morphology.forEach(([form, tag], index) => {
@@ -622,11 +623,18 @@ function renderMorphology(item) {
             renderCaptionText(item);
             tokens.querySelectorAll(".morpheme-token").forEach((other, otherIndex) => other.classList.toggle("is-selected", otherIndex === highlightedMorpheme));
         };
-        token.addEventListener("mouseenter", () => { highlightedMorpheme = index; renderCaptionText(item); });
-        token.addEventListener("mouseleave", () => {
-            if (!token.matches(":focus-visible")) {
+        token.addEventListener("pointerenter", event => {
+            if (event.pointerType !== "touch") {
+                highlightedMorpheme = index;
+                renderCaptionText(item);
+                tokens.querySelectorAll(".morpheme-token").forEach((other, otherIndex) => other.classList.toggle("is-selected", otherIndex === highlightedMorpheme));
+            }
+        });
+        token.addEventListener("pointerleave", event => {
+            if (event.pointerType !== "touch" && !token.matches(":focus-visible")) {
                 highlightedMorpheme = null;
                 renderCaptionText(item);
+                token.classList.remove("is-selected");
             }
         });
         token.addEventListener("click", activate);
