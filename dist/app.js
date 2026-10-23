@@ -314,6 +314,7 @@ async function selectClip(name) {
     activeUtteranceEnd = null;
     revealCandidate = null;
     revealedUtterance = null;
+    highlightedMorpheme = null;
     utteranceButtons.clear();
     utteranceList.scrollTop = 0;
     utteranceList.scrollLeft = 0;
@@ -532,6 +533,9 @@ async function playUtterance(item) {
         revealedUtterance = null;
     }
     activeUtterance = item;
+    highlightedMorpheme = null;
+    morphologyPanel.replaceChildren();
+    morphologyPanel.hidden = true;
     activeUtteranceEnd = item.end;
     if (previousRevealCandidate && previousRevealCandidate !== revealCandidate) {
         syncUtteranceReveal(previousRevealCandidate);
@@ -576,7 +580,13 @@ function updateMorphologyAvailability() {
     const captionsVisible = captionsEnabled.checked;
     morphologyEnabled.disabled = !captionsVisible;
     morphologySetting.classList.toggle("is-disabled", !captionsVisible);
-    if (!captionsVisible) morphologyEnabled.checked = false;
+    if (!captionsVisible) {
+        morphologyEnabled.checked = false;
+        highlightedMorpheme = null;
+        morphologyPanel.replaceChildren();
+        morphologyPanel.hidden = true;
+    }
+    renderCaptionText(activeUtterance);
 }
 
 function renderMorphology(item) {
@@ -613,9 +623,12 @@ function renderMorphology(item) {
             tokens.querySelectorAll(".morpheme-token").forEach((other, otherIndex) => other.classList.toggle("is-selected", otherIndex === highlightedMorpheme));
         };
         token.addEventListener("mouseenter", () => { highlightedMorpheme = index; renderCaptionText(item); });
-        token.addEventListener("mouseleave", () => { highlightedMorpheme = null; renderCaptionText(item); });
-        token.addEventListener("focus", () => { highlightedMorpheme = index; renderCaptionText(item); });
-        token.addEventListener("blur", () => { highlightedMorpheme = null; renderCaptionText(item); });
+        token.addEventListener("mouseleave", () => {
+            if (!token.matches(":focus-visible")) {
+                highlightedMorpheme = null;
+                renderCaptionText(item);
+            }
+        });
         token.addEventListener("click", activate);
         tokens.append(token);
     });
@@ -625,34 +638,58 @@ function renderMorphology(item) {
 const MORPHEME_COLORS = [
     "#c2415d", "#2563a8", "#0f766e", "#9a6700", "#7c3aed",
     "#b45309", "#047857", "#be185d", "#4338ca", "#15803d",
-    "#c026d3", "#0369a1", "#a16207", "#6d28d9", "#0f766e"
+    "#c026d3", "#0369a1", "#a16207", "#6d28d9", "#0e7490",
+    "#be123c", "#4d7c0f", "#7e22ce", "#0369a1", "#c2410c",
+    "#115e59", "#a21caf", "#1d4ed8", "#854d0e", "#166534"
 ];
 
+const morphemeColorCache = new Map();
 function morphemeColor(tag) {
-    const hash = [...tag].reduce((total, character) => total * 31 + character.charCodeAt(0), 0);
-    return MORPHEME_COLORS[Math.abs(hash) % MORPHEME_COLORS.length];
+    if (!morphemeColorCache.has(tag)) {
+        morphemeColorCache.set(tag, MORPHEME_COLORS[morphemeColorCache.size % MORPHEME_COLORS.length]);
+    }
+    return morphemeColorCache.get(tag);
 }
 
 function renderCaptionText(item) {
     caption.replaceChildren();
     if (!item) return;
     const text = item.text;
-    let cursor = 0;
-    item.morphology.forEach(([form], index) => {
-        const value = String(form);
-        const matchValue = value.trim();
-        const start = matchValue ? text.indexOf(matchValue, cursor) : -1;
-        if (start < 0) return;
-        caption.append(document.createTextNode(text.slice(cursor, start)));
+    if (!morphologyEnabled.checked) {
+        caption.textContent = text;
+        return;
+    }
+
+    const ranges = [];
+    item.morphology.forEach(([form, tag, start, length], index) => {
+        const rangeStart = Number(start);
+        const rangeLength = Number(length);
+        if (!Number.isInteger(rangeStart) || !Number.isInteger(rangeLength) || rangeLength <= 0) return;
+        ranges.push({ start: rangeStart, end: rangeStart + rangeLength, index, tag, form });
+    });
+    const boundaries = new Set([0, text.length]);
+    ranges.forEach(range => {
+        boundaries.add(Math.max(0, Math.min(text.length, range.start)));
+        boundaries.add(Math.max(0, Math.min(text.length, range.end)));
+    });
+    const points = [...boundaries].sort((a, b) => a - b);
+    points.slice(0, -1).forEach((start, pointIndex) => {
+        const end = points[pointIndex + 1];
+        const segment = text.slice(start, end);
+        const covering = ranges.filter(range => range.start <= start && range.end >= end);
+        if (!covering.length) {
+            caption.append(document.createTextNode(segment));
+            return;
+        }
         const span = document.createElement("span");
         span.className = "caption-morpheme";
-        span.textContent = matchValue;
-        span.classList.toggle("is-highlighted", index === highlightedMorpheme);
-        span.style.setProperty("--morpheme-color", morphemeColor(String(item.morphology[index][1])));
+        span.textContent = segment;
+        const active = covering.find(range => range.index === highlightedMorpheme);
+        const colorRange = active || covering[0];
+        span.style.setProperty("--morpheme-color", morphemeColor(String(colorRange.tag)));
+        span.classList.toggle("is-highlighted", Boolean(active));
         caption.append(span);
-        cursor = start + matchValue.length;
     });
-    caption.append(document.createTextNode(text.slice(cursor)));
 }
 
 function escapeHtml(value) {
@@ -663,6 +700,7 @@ function escapeHtml(value) {
 
 function updateCaption(item) {
     if (!captionsEnabled.checked) {
+        highlightedMorpheme = null;
         caption.textContent = "Captions are off";
         caption.classList.add("disabled");
         morphologyPanel.hidden = true;
@@ -779,10 +817,11 @@ captionsEnabled.addEventListener("change", () => {
     updateCaption(activeUtterance);
     renderUtterances();
 });
-morphologyEnabled.addEventListener("change", () => {
-    savePreference("morphologyEnabled", morphologyEnabled.checked);
-    renderMorphology(activeUtterance);
-});
+  morphologyEnabled.addEventListener("change", () => {
+ savePreference("morphologyEnabled", morphologyEnabled.checked);
+ renderCaptionText(activeUtterance);
+ renderMorphology(activeUtterance);
+  });
 hideShort.addEventListener("change", () => {
     savePreference("hideShort", hideShort.checked);
     renderUtterances();

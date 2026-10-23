@@ -489,13 +489,18 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     animation: morphology-in 220ms ease-out;
 }
 .morphology-label { color: var(--gold); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
-.morpheme-tokens { display: flex; flex-wrap: wrap; gap: 7px; }
-.morpheme-token { position: relative; display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 8px 6px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 38%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--morpheme-color) 12%, var(--surface)); color: var(--ink); cursor: pointer; font-family: var(--font-reading); transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
-.morpheme-token:hover, .morpheme-token:focus-visible, .morpheme-token.is-selected { border-color: var(--morpheme-color); background: color-mix(in srgb, var(--morpheme-color) 20%, var(--surface)); box-shadow: 0 4px 12px color-mix(in srgb, var(--morpheme-color) 20%, transparent); transform: translateY(-2px); }
+.morpheme-tokens { position: relative; display: flex; flex-wrap: wrap; gap: 7px; isolation: isolate; }
+.morpheme-token { position: relative; z-index: 1; display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 8px 6px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 38%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--morpheme-color) 12%, var(--surface)); color: var(--ink); cursor: pointer; font-family: var(--font-reading); transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+.morpheme-token:hover, .morpheme-token:focus-visible, .morpheme-token.is-selected { z-index: 50; border-color: var(--morpheme-color); background: color-mix(in srgb, var(--morpheme-color) 20%, var(--surface)); box-shadow: 0 4px 12px color-mix(in srgb, var(--morpheme-color) 20%, transparent); transform: translateY(-2px); }
 .morpheme-token b { font-size: 1rem; font-weight: 600; }
-.morpheme-info { position: absolute; z-index: 1000; top: calc(100% + 9px); left: 50%; display: grid; width: min(245px, 72vw); gap: 3px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 45%, var(--line)); border-radius: 11px; background: var(--surface); color: var(--ink); box-shadow: 0 12px 28px rgba(37, 42, 69, 0.18); opacity: 0; pointer-events: none; transform: translate(-50%, -5px) scale(.97); transition: opacity 160ms ease, transform 160ms ease; }
+.morpheme-info { position: absolute; z-index: 9999; top: calc(100% + 9px); left: 50%; display: grid; width: min(245px, calc(100vw - 32px)); max-width: calc(100vw - 32px); box-sizing: border-box; gap: 3px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 45%, var(--line)); border-radius: 11px; background: var(--surface); color: var(--ink); box-shadow: 0 12px 28px rgba(37, 42, 69, 0.18); opacity: 0; pointer-events: none; transform: translate(-50%, -5px) scale(.97); transition: opacity 160ms ease, transform 160ms ease; }
 .morpheme-token:first-child .morpheme-info { left: 0; transform: translate(0, -5px) scale(.97); }
 .morpheme-token:last-child .morpheme-info { left: auto; right: 0; transform: translate(0, -5px) scale(.97); }
+@media (max-width: 560px) {
+    .morpheme-info { left: 0; transform: translate(0, -5px) scale(.97); }
+    .morpheme-token:last-child .morpheme-info { left: auto; right: 0; transform: translate(0, -5px) scale(.97); }
+    .morpheme-token:hover .morpheme-info, .morpheme-token:focus-visible .morpheme-info, .morpheme-token.is-selected .morpheme-info { transform: translate(0, 0) scale(1); }
+}
 .morpheme-token:hover .morpheme-info, .morpheme-token:focus-visible .morpheme-info, .morpheme-token.is-selected .morpheme-info { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) scale(1); }
 .morpheme-token:first-child:hover .morpheme-info, .morpheme-token:first-child:focus-visible .morpheme-info, .morpheme-token:first-child.is-selected .morpheme-info, .morpheme-token:last-child:hover .morpheme-info, .morpheme-token:last-child:focus-visible .morpheme-info, .morpheme-token:last-child.is-selected .morpheme-info { transform: translate(0, 0) scale(1); }
 .morpheme-info strong { font-family: var(--font-ui); font-size: .78rem; }
@@ -522,6 +527,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     line-height: 1.7;
     text-align: center;
     overflow-wrap: anywhere;
+    white-space: pre-wrap;
 }
 
 #caption.disabled { color: #858797; font-family: var(--font-ui); font-size: 0.86rem; }
