@@ -54,6 +54,18 @@
       "meaning": "descriptive words: good, big, pretty, cold, hot",
       "example": "좋다"
     },
+    "VA-I": {
+      "name": "형용사 변형 (irregular)",
+      "english": "Adjective Variant (Irregular)",
+      "meaning": "an irregularly conjugated descriptive word with a special stem change",
+      "example": "안타깝다"
+    },
+    "VA-R": {
+      "name": "형용사 변형 (regular)",
+      "english": "Adjective Variant (Regular)",
+      "meaning": "a regularly conjugated descriptive word with a standard stem form",
+      "example": "좁다, 올곧다"
+    },
     "VX": {
       "name": "보조 용언",
       "english": "Auxiliary Predicate",

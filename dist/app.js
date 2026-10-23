@@ -330,8 +330,10 @@ async function selectClip(name) {
     downloadTrack.classList.add("is-disabled");
     downloadTrack.setAttribute("aria-disabled", "true");
     resetAudioControls();
+    caption.replaceChildren();
     caption.textContent = captionsEnabled.checked ? "" : "Captions are off";
     caption.classList.toggle("disabled", !captionsEnabled.checked);
+    updateCaption(null);
     renderClips();
     clipTitle.textContent = name;
     renderSpeakerInfo(name);
@@ -589,75 +591,87 @@ async function playUtterance(item) {
     }
 }
 
-function updateMorphologyAvailability() {
-    const captionsVisible = captionsEnabled.checked;
-    morphologyEnabled.disabled = !captionsVisible;
-    morphologySetting.classList.toggle("is-disabled", !captionsVisible);
-    if (!captionsVisible) {
-        morphologyEnabled.checked = false;
-        highlightedMorpheme = null;
-        morphologyPanel.replaceChildren();
-        morphologyPanel.hidden = true;
-    }
-    renderCaptionText(activeUtterance);
+  function updateMorphologyAvailability() {
+  const captionsVisible = captionsEnabled.checked;
+  morphologyEnabled.disabled = !captionsVisible;
+  morphologySetting.classList.toggle("is-disabled", !captionsVisible);
+  if (!captionsVisible) {
+  morphologyEnabled.checked = false;
+  highlightedMorpheme = null;
+  morphologyPanel.replaceChildren();
+  morphologyPanel.hidden = true;
+  }
+  updateCaption(activeUtterance);
+  }
+
+function morphologyDescription(form, tag) {
+    const info = posTags[String(tag)] || {};
+    const card = document.createElement("span");
+    card.className = "caption-morpheme-card";
+    card.style.setProperty("--morpheme-color", morphemeColor(String(tag)));
+    card.innerHTML = `<strong>${escapeHtml(String(form))}</strong><b>${escapeHtml(info.name || String(tag))}</b><em>${escapeHtml(info.english || "Part of speech")}</em><span>${escapeHtml(info.meaning || "No description available.")}</span>${info.example ? `<small>Example: ${escapeHtml(info.example)}</small>` : ""}`;
+    return card;
 }
 
-function renderMorphology(item) {
-    morphologyPanel.replaceChildren();
-    const shouldShow = captionsEnabled.checked && morphologyEnabled.checked && item;
-    morphologyPanel.hidden = !shouldShow;
-    highlightedMorpheme = null;
-    if (!shouldShow) return;
+function bindCaptionMorpheme(span, item, covering) {
+    const popup = document.createElement("span");
+    popup.className = "caption-morpheme-popup";
+    popup.setAttribute("role", "tooltip");
+    covering.forEach(range => popup.append(morphologyDescription(range.form, range.tag)));
+    span.append(popup);
 
-    const label = document.createElement("span");
-    label.className = "morphology-label";
-    label.textContent = "Morpheme Map · Touch to explore";
-    const tokens = document.createElement("div");
-    tokens.className = "morpheme-tokens";
-    item.morphology.forEach(([form, tag], index) => {
-        const info = posTags[String(tag)] || {};
-        const token = document.createElement("button");
-        token.type = "button";
-        token.className = "morpheme-token";
-        token.dataset.tag = String(tag);
-        token.style.setProperty("--morpheme-color", morphemeColor(String(tag)));
-        token.setAttribute("aria-label", `${form}, ${info.english || tag}`);
-        const formNode = document.createElement("b");
-        formNode.textContent = String(form);
-        const popup = document.createElement("span");
-        popup.className = "morpheme-info";
-        popup.setAttribute("role", "tooltip");
-        popup.innerHTML = `<strong>${escapeHtml(info.name || String(tag))}</strong><em>${escapeHtml(info.english || "Part of speech")}</em><span>${escapeHtml(info.meaning || "No description available.")}</span>${info.example ? `<small>Example: ${escapeHtml(info.example)}</small>` : ""}`;
-        token.append(formNode, popup);
-        const activate = event => {
-            event.stopPropagation();
-            highlightedMorpheme = highlightedMorpheme === index ? null : index;
-            renderCaptionText(item);
-            tokens.querySelectorAll(".morpheme-token").forEach((other, otherIndex) => other.classList.toggle("is-selected", otherIndex === highlightedMorpheme));
-        };
-        token.addEventListener("pointerenter", event => {
-            if (event.pointerType !== "touch") {
-                highlightedMorpheme = index;
-                renderCaptionText(item);
-                tokens.querySelectorAll(".morpheme-token").forEach((other, otherIndex) => other.classList.toggle("is-selected", otherIndex === highlightedMorpheme));
-            }
+    const clear = () => {
+        const wasHighlighted = highlightedMorpheme !== null;
+        highlightedMorpheme = null;
+        span.classList.remove("is-highlighted");
+        span.classList.add("is-dismissed");
+        if (wasHighlighted && activeUtterance === item) renderCaptionText(item);
+    };
+    const sync = (index) => {
+        highlightedMorpheme = index;
+        span.classList.remove("is-dismissed");
+        document.querySelectorAll(".caption-morpheme").forEach(other => {
+            if (other !== span) other.classList.remove("is-highlighted");
         });
-        token.addEventListener("pointerleave", event => {
-            if (event.pointerType !== "touch" && !token.matches(":focus-visible")) {
-                highlightedMorpheme = null;
-                renderCaptionText(item);
-                token.classList.remove("is-selected");
-            }
-        });
-        token.addEventListener("pointerdown", event => {
-            if (event.pointerType === "touch") activate(event);
-        });
-        token.addEventListener("click", event => {
-            if (event.detail === 0 || event.pointerType !== "touch") activate(event);
-        });
-        tokens.append(token);
+        span.classList.toggle("is-highlighted", index !== null);
+        renderCaptionText(item);
+    };
+    span.addEventListener("pointerenter", event => {
+        span.classList.remove("is-dismissed");
+        if (event.pointerType !== "touch") sync(covering[0].index);
     });
-    morphologyPanel.append(label, tokens);
+    span.addEventListener("pointerleave", event => {
+        if (event.pointerType !== "touch") clear();
+    });
+    span.addEventListener("focusout", () => {
+        if (!span.matches(":focus-within")) clear();
+    });
+    span.addEventListener("pointerdown", event => {
+        if (event.pointerType === "touch") {
+            event.preventDefault();
+            if (highlightedMorpheme === covering[0].index) clear();
+            else sync(covering[0].index);
+        }
+    });
+    span.addEventListener("click", event => {
+        if (event.detail === 0) {
+            event.preventDefault();
+            sync(highlightedMorpheme === covering[0].index ? null : covering[0].index);
+        }
+    });
+  }
+  
+  document.addEventListener("pointerdown", event => {
+  if (event.target.closest?.(".caption-morpheme")) return;
+  if (highlightedMorpheme !== null) {
+  highlightedMorpheme = null;
+  renderCaptionText(activeUtterance);
+  }
+  });
+  
+  function renderMorphology() {
+    morphologyPanel.replaceChildren();
+    morphologyPanel.hidden = true;
 }
 
 const MORPHEME_COLORS = [
@@ -713,6 +727,7 @@ function renderCaptionText(item) {
         const colorRange = active || covering[0];
         span.style.setProperty("--morpheme-color", morphemeColor(String(colorRange.tag)));
         span.classList.toggle("is-highlighted", Boolean(active));
+        bindCaptionMorpheme(span, item, covering);
         caption.append(span);
     });
 }
@@ -860,6 +875,7 @@ downloadTrack.addEventListener("click", event => {
 });
 
 player.addEventListener("timeupdate", () => {
+    if (!currentClip || !utterances.length) return;
     const time = player.currentTime;
     if (activeUtteranceEnd !== null && time >= activeUtteranceEnd) {
         const end = activeUtteranceEnd;
