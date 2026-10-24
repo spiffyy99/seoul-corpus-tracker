@@ -348,6 +348,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     height: 100%;
     min-height: 0;
     flex-direction: column;
+    overflow-anchor: none;
     padding: clamp(18px, 3vw, 32px);
 }
 .main-panel > * { flex-shrink: 0; }
@@ -558,6 +559,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     min-width: 0;
     min-height: 0;
     flex: 1;
+    overflow-anchor: none;
     align-content: start;
     grid-template-columns: max-content;
     gap: 7px;

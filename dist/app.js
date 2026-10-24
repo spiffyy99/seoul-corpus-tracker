@@ -504,10 +504,12 @@ function syncUtteranceReveal(item) {
         revealButton.disabled = true;
         revealButton.setAttribute("aria-hidden", "true");
         revealButton.addEventListener("click", () => {
+            const restoreViewportPosition = captureViewportPosition();
             const shouldReveal = revealedUtterance !== item;
             revealedUtterance = shouldReveal ? item : null;
             syncUtteranceReveal(item);
             if (activeUtterance === item) updateCaption(item);
+            restoreViewportPosition();
         });
         row.append(revealButton);
         revealButtonAfterSlotOpens(row, revealButton);
@@ -563,6 +565,7 @@ function renderUtterances() {
 }
 
 async function playUtterance(item) {
+    const restoreViewportPosition = captureViewportPosition();
     const thisSelection = selectionId;
     const thisUtteranceRequest = ++utteranceRequestId;
     cancelPendingUtteranceStart();
@@ -593,6 +596,7 @@ async function playUtterance(item) {
         scrollActiveUtteranceIntoView(button);
     }
     updateCaption(item);
+    restoreViewportPosition();
 
     const seekAndPlay = async () => {
         if (pendingUtteranceStart === seekAndPlay) {
@@ -864,6 +868,23 @@ function updateCaption(item) {
     renderMorphology(item);
 }
 
+function captureViewportPosition() {
+    const pageX = window.scrollX;
+    const pageY = window.scrollY;
+    const listX = utteranceList.scrollLeft;
+    const listY = utteranceList.scrollTop;
+
+    return () => requestAnimationFrame(() => {
+        const root = document.documentElement;
+        const previousScrollBehavior = root.style.scrollBehavior;
+        root.style.scrollBehavior = "auto";
+        window.scrollTo(pageX, pageY);
+        root.style.scrollBehavior = previousScrollBehavior;
+        utteranceList.scrollLeft = listX;
+        utteranceList.scrollTop = listY;
+    });
+}
+
 function scrollActiveUtteranceIntoView(button) {
     const listBounds = utteranceList.getBoundingClientRect();
     const buttonBounds = button.getBoundingClientRect();
@@ -967,17 +988,21 @@ speed.addEventListener("input", () => {
 });
 
 captionsEnabled.addEventListener("change", () => {
+    const restoreViewportPosition = captureViewportPosition();
     savePreference("captionsEnabled", captionsEnabled.checked);
     revealCandidate = null;
     revealedUtterance = null;
     if (captionsEnabled.checked) resetCaptionHeight();
     updateCaption(activeUtterance);
     renderUtterances();
+    restoreViewportPosition();
 });
   morphologyEnabled.addEventListener("change", () => {
+  const restoreViewportPosition = captureViewportPosition();
  savePreference("morphologyEnabled", morphologyEnabled.checked);
   if (!morphologyEnabled.checked) resetCaptionHeight();
   updateCaption(activeUtterance);
+  restoreViewportPosition();
   });
 hideShort.addEventListener("change", () => {
     savePreference("hideShort", hideShort.checked);
