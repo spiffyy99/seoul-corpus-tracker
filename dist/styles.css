@@ -433,7 +433,9 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 
 #play-pause {
     display: inline-flex;
-    min-width: 91px;
+    width: 92px;
+    min-width: 92px;
+    flex: 0 0 92px;
     min-height: 43px;
     align-items: center;
     justify-content: center;
@@ -446,7 +448,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     cursor: pointer;
     font-size: 0.84rem;
     font-weight: 800;
-    transition: background 150ms ease, transform 150ms ease;
+    box-sizing: border-box;
+    transition: background 150ms ease;
 }
 
 #play-pause:hover:not(:disabled) { background: #cf5443; transform: translateY(-1px); }
@@ -474,8 +477,6 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .settings { display: flex; flex-wrap: wrap; gap: 12px 20px; }
 .setting { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-soft); font-size: 0.8rem; cursor: pointer; }
 .setting input { width: 15px; height: 15px; margin: 0; accent-color: var(--teal); }
-.setting-dependent.is-disabled { color: #a8a9b3; cursor: not-allowed; }
-.setting-dependent input:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .morphology-panel[hidden] { display: none; }
 .morphology-panel {
@@ -504,10 +505,10 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .morpheme-info small { margin-top: 2px; }
 @keyframes morphology-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
-  #caption {
+#caption {
   position: relative;
   z-index: 3000;
-  display: block;
+  display: flex;
     min-height: 72px;
     align-items: center;
     justify-content: center;
@@ -527,24 +528,25 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     overflow-wrap: anywhere;
     white-space: pre-wrap;
 }
+.caption-content { display: block; width: 100%; }
 
 #caption.disabled { color: #858797; font-family: var(--font-ui); font-size: 0.86rem; }
-.caption-morpheme { position: relative; display: inline-block; border-radius: 0.28em; background: color-mix(in srgb, var(--morpheme-color) 16%, transparent); box-shadow: inset 0 -0.18em color-mix(in srgb, var(--morpheme-color) 48%, transparent); cursor: pointer; transition: background 180ms ease, box-shadow 180ms ease, color 180ms ease; }
+.caption-morpheme { position: relative; display: inline-block; border-radius: 0.28em; background: color-mix(in srgb, var(--morpheme-color) 16%, transparent); box-shadow: inset 0 -0.18em color-mix(in srgb, var(--morpheme-color) 48%, transparent); cursor: pointer; touch-action: pan-y; transition: background 180ms ease, box-shadow 180ms ease, color 180ms ease; }
 .caption-morpheme.is-highlighted, .caption-morpheme:hover { background: color-mix(in srgb, var(--morpheme-color) 32%, transparent); box-shadow: inset 0 -0.42em color-mix(in srgb, var(--morpheme-color) 72%, transparent); color: color-mix(in srgb, var(--morpheme-color) 72%, var(--ink)); }
- .caption-morpheme-popup { position: absolute; z-index: 2147483647; top: calc(100% + 12px); left: 50%; display: flex; width: max-content; max-width: min(760px, calc(100vw - 28px)); gap: 8px; padding: 9px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 45%, var(--line)); border-radius: 12px; background: var(--surface); box-shadow: 0 16px 36px rgba(0, 0, 0, .28); opacity: 0; pointer-events: none; transform: translate(-50%, -5px) scale(.98); transition: opacity 160ms ease, transform 160ms ease; }
-.caption-morpheme-popup::before { position: absolute; top: -6px; left: 50%; width: 10px; height: 10px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); background: var(--surface); content: ""; transform: translateX(-50%) rotate(45deg); }
-.caption-morpheme:hover .caption-morpheme-popup, .caption-morpheme.is-highlighted .caption-morpheme-popup { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) scale(1); }
-.caption-morpheme.is-dismissed .caption-morpheme-popup { opacity: 0 !important; pointer-events: none !important; transform: translate(-50%, -5px) scale(.98) !important; }
+.caption-morpheme-popup { position: absolute; z-index: 2147483647; top: calc(100% + 12px); left: var(--caption-popup-left, 0px); display: flex; width: max-content; max-width: min(760px, calc(100vw - 28px)); box-sizing: border-box; gap: 8px; padding: 9px; border: 1px solid color-mix(in srgb, var(--morpheme-color) 45%, var(--line)); border-radius: 12px; background: var(--surface); box-shadow: 0 16px 36px rgba(0, 0, 0, .28); opacity: 0; overflow-wrap: anywhere; pointer-events: none; transform: translateY(-5px) scale(.98); transition: opacity 160ms ease, transform 160ms ease; }
+.caption-morpheme-popup::before { position: absolute; top: -6px; left: var(--caption-popup-arrow-left, 50%); width: 10px; height: 10px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); background: var(--surface); content: ""; transform: translateX(-50%) rotate(45deg); }
+.caption-morpheme:hover .caption-morpheme-popup, .caption-morpheme.is-popup-anchor .caption-morpheme-popup { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+.caption-morpheme.is-dismissed .caption-morpheme-popup { opacity: 0 !important; pointer-events: none !important; transform: translateY(-5px) scale(.98) !important; }
 .caption-morpheme.is-dismissed:hover .caption-morpheme-popup { opacity: 0 !important; pointer-events: none !important; }
  @media (max-width: 650px) { .caption-morpheme.is-dismissed .caption-morpheme-popup { transform: translateY(5px) scale(.98) !important; } }
-  .caption-morpheme-card { display: grid; min-width: 170px; max-width: 220px; gap: 2px; padding: 8px 10px; border-left: 3px solid var(--morpheme-color); text-align: left; word-spacing: normal; letter-spacing: normal; }
+.caption-morpheme-card { display: grid; min-width: 0; max-width: 220px; gap: 2px; padding: 8px 10px; border-left: 3px solid var(--morpheme-color); text-align: left; word-spacing: normal; letter-spacing: normal; }
 .caption-morpheme-card strong { color: var(--morpheme-color); font-family: var(--font-reading); font-size: 1.05rem; }
 .caption-morpheme-card b { color: var(--ink); font-family: var(--font-ui); font-size: .73rem; }
 .caption-morpheme-card em { color: var(--morpheme-color); font-family: var(--font-ui); font-size: .68rem; font-style: normal; font-weight: 750; }
 .caption-morpheme-card span, .caption-morpheme-card small { color: var(--ink-soft); font-family: var(--font-ui); font-size: .68rem; line-height: 1.35; }
 .caption-morpheme-card small { margin-top: 2px; }
 .caption-morpheme-popup .caption-morpheme-card + .caption-morpheme-card { border-left-color: color-mix(in srgb, var(--morpheme-color) 55%, var(--blue)); }
- @media (max-width: 650px) { .caption-morpheme-popup { position: absolute; top: calc(100% + 8px); bottom: auto; left: var(--caption-popup-left, 0px); right: auto; width: min(320px, calc(100vw - 28px)); max-width: none; box-sizing: border-box; transform: translateY(-5px) scale(.98); } .caption-morpheme:hover .caption-morpheme-popup, .caption-morpheme.is-highlighted .caption-morpheme-popup { transform: translateY(0) scale(1); } .caption-morpheme-popup::before { display: none; } .caption-morpheme-card { min-width: 0; flex: 1 1 0; } }
+ @media (max-width: 650px) { .caption-morpheme-popup { top: calc(100% + 8px); right: auto; width: min(320px, calc(100vw - 28px)); max-width: calc(100vw - 28px); } .caption-morpheme:hover .caption-morpheme-popup, .caption-morpheme.is-popup-anchor .caption-morpheme-popup { transform: translateY(0) scale(1); } .caption-morpheme-popup::before { display: none; } .caption-morpheme-card { flex: 1 1 0; } }
 .transcript-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 7px 0 4px; }
 .transcript-tools label { color: var(--ink-soft); font-size: 0.8rem; font-weight: 650; }
 .transcript-search { width: min(250px, 55%); margin: 0; }
@@ -752,7 +754,6 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 [data-theme="dark"] .search-input {
     background: #191d2b;
 }
-[data-theme="dark"] .setting-dependent.is-disabled { color: #686d80; }
 [data-theme="dark"] .morphology-panel { background: linear-gradient(135deg, #433a27, #49302f); border-color: rgba(239, 203, 121, 0.35); }
   [data-theme="dark"] .morpheme-token { background: color-mix(in srgb, var(--morpheme-color) 18%, var(--surface)); border-color: color-mix(in srgb, var(--morpheme-color) 62%, var(--line)); color: var(--ink); }
 
@@ -837,7 +838,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     .track-button { min-height: 37px; padding: 7px 10px; }
     .audio-controls { padding: 12px; }
     .audio-control-row { gap: 8px; }
-    #play-pause { min-width: 78px; padding-inline: 10px; }
+    #play-pause { padding-inline: 10px; }
     #audio-time { min-width: 75px; font-size: 0.7rem; }
     .speed-setting { grid-template-columns: auto minmax(60px, 1fr) 45px; gap: 9px; }
     #caption { min-height: 82px; padding: 14px; }

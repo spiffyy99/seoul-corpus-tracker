@@ -10,7 +10,6 @@ const speed = document.querySelector("#speed");
 const speedValue = document.querySelector("#speed-value");
 const captionsEnabled = document.querySelector("#captions-enabled");
 const morphologyEnabled = document.querySelector("#morphology-enabled");
-const morphologySetting = document.querySelector("#morphology-setting");
 const caption = document.querySelector("#caption");
 const morphologyPanel = document.querySelector("#morphology-panel");
 const hideShort = document.querySelector("#hide-short");
@@ -50,6 +49,7 @@ let highlightedMorpheme = null;
 
 const utteranceCache = new Map();
 const utteranceButtons = new Map();
+const captionMorphemeRanges = new WeakMap();
 
 function parseClipName(clipName) {
     const match = clipName.match(/^(s\d{2})([mf])(\d{2})([mf])([1-6])$/);
@@ -136,7 +136,6 @@ function restorePreferences() {
 
     captionsEnabled.checked = preferences.captionsEnabled === true;
     morphologyEnabled.checked = preferences.morphologyEnabled === true;
-    updateMorphologyAvailability();
     hideShort.checked = preferences.hideShort !== false;
     const rate = Number(speed.value);
     speedValue.textContent = `${rate.toFixed(2)}×`;
@@ -505,6 +504,7 @@ function syncUtteranceReveal(item) {
             const shouldReveal = revealedUtterance !== item;
             revealedUtterance = shouldReveal ? item : null;
             syncUtteranceReveal(item);
+            if (activeUtterance === item) updateCaption(item);
         });
         row.append(revealButton);
         revealButtonAfterSlotOpens(row, revealButton);
@@ -576,7 +576,6 @@ async function playUtterance(item) {
     highlightedMorpheme = null;
     morphologyPanel.replaceChildren();
     morphologyPanel.hidden = true;
-    renderCaptionText(item);
     activeUtteranceEnd = item.end;
     if (previousRevealCandidate && previousRevealCandidate !== revealCandidate) {
         syncUtteranceReveal(previousRevealCandidate);
@@ -625,45 +624,76 @@ async function playUtterance(item) {
     }
 }
 
-  function updateMorphologyAvailability() {
-  const captionsVisible = captionsEnabled.checked;
-  morphologyEnabled.disabled = !captionsVisible;
-  morphologySetting.classList.toggle("is-disabled", !captionsVisible);
-  if (!captionsVisible) {
-  morphologyEnabled.checked = false;
-  highlightedMorpheme = null;
-  morphologyPanel.replaceChildren();
-  morphologyPanel.hidden = true;
-  }
-  updateCaption(activeUtterance);
-  }
-
 function morphologyDescription(form, tag) {
     const info = posTags[String(tag)] || {};
+    const tagName = String(tag);
+    const rawForm = String(form).trim();
+    const isVerbOrAdjective =
+        /^(?:VV|VA)(?:-(?:I|R))?$/.test(tagName) ||
+        ["VX", "VCP", "VCN", "XSV", "XSA", "NV"].includes(tagName);
+    const displayForm =
+        isVerbOrAdjective && !rawForm.endsWith("다") ? `${rawForm}다` : rawForm;
     const card = document.createElement("span");
     card.className = "caption-morpheme-card";
-    card.style.setProperty("--morpheme-color", morphemeColor(String(tag)));
-    card.innerHTML = `<strong>${escapeHtml(String(form))}</strong><b>${escapeHtml(info.name || String(tag))}</b><em>${escapeHtml(info.english || "Part of speech")}</em><span>${escapeHtml(info.meaning || "No description available.")}</span>${info.example ? `<small>Example: ${escapeHtml(info.example)}</small>` : ""}`;
+    card.style.setProperty("--morpheme-color", morphemeColor(tagName));
+    card.innerHTML = `<strong>${escapeHtml(displayForm)}</strong><b>${escapeHtml(info.name || tagName)}</b><em>${escapeHtml(info.english || "Part of speech")}</em><span>${escapeHtml(info.meaning || "No description available.")}</span>${info.example ? `<small>Example: ${escapeHtml(info.example)}</small>` : ""}`;
     return card;
 }
 
 function positionCaptionMorphemePopup(span, popup) {
-    if (window.innerWidth > 650) {
-        popup.style.removeProperty("--caption-popup-left");
-        return;
-    }
-
     const anchor = span.getBoundingClientRect();
-    const popupWidth = popup.getBoundingClientRect().width;
+    const viewport = window.visualViewport;
+    const viewportLeft = viewport ? viewport.offsetLeft : 0;
+    const viewportWidth = viewport?.width || document.documentElement.clientWidth || window.innerWidth;
+    popup.style.maxWidth = `${Math.max(1, viewportWidth - 28)}px`;
+    const popupWidth = popup.offsetWidth;
     if (!popupWidth) return;
 
     const viewportMargin = 14;
     const desiredLeft = anchor.left + anchor.width / 2 - popupWidth / 2;
-    const left = Math.max(
-        viewportMargin,
-        Math.min(desiredLeft, window.innerWidth - viewportMargin - popupWidth)
+    const minimumLeft = viewportLeft + viewportMargin;
+    const maximumLeft = Math.max(
+        minimumLeft,
+        viewportLeft + viewportWidth - viewportMargin - popupWidth
     );
+    const left = Math.max(
+        minimumLeft,
+        Math.min(desiredLeft, maximumLeft)
+    );
+    const anchorCenter = anchor.left + anchor.width / 2;
     popup.style.setProperty("--caption-popup-left", `${left - anchor.left}px`);
+    popup.style.setProperty(
+        "--caption-popup-arrow-left",
+        `${Math.max(12, Math.min(anchorCenter - left, popupWidth - 12))}px`
+    );
+}
+
+function setCaptionMorphemeSelection(index, sourceSpan) {
+    highlightedMorpheme = index;
+    const spans = [...document.querySelectorAll(".caption-morpheme")];
+    let popupAnchor = null;
+    spans.forEach(span => {
+        const covering = captionMorphemeRanges.get(span) || [];
+        const active = index === null ? null : covering.find(range => range.index === index);
+        const colorRange = active || covering[0];
+        span.classList.toggle("is-highlighted", Boolean(active));
+        span.classList.remove("is-popup-anchor");
+        if (active) {
+            span.classList.remove("is-dismissed");
+            if (span === sourceSpan || popupAnchor === null) popupAnchor = span;
+        } else if (index !== null || span === sourceSpan) {
+            span.classList.add("is-dismissed");
+        }
+        if (colorRange) {
+            span.style.setProperty("--morpheme-color", morphemeColor(String(colorRange.tag)));
+        }
+    });
+
+    if (popupAnchor) {
+        popupAnchor.classList.add("is-popup-anchor");
+        const popup = popupAnchor.querySelector(".caption-morpheme-popup");
+        if (popup) positionCaptionMorphemePopup(popupAnchor, popup);
+    }
 }
 
 function bindCaptionMorpheme(span, item, covering) {
@@ -677,20 +707,10 @@ function bindCaptionMorpheme(span, item, covering) {
     }
 
     const clear = () => {
-        const wasHighlighted = highlightedMorpheme !== null;
-        highlightedMorpheme = null;
-        span.classList.remove("is-highlighted");
-        span.classList.add("is-dismissed");
-        if (wasHighlighted && activeUtterance === item) renderCaptionText(item);
+        setCaptionMorphemeSelection(null, span);
     };
     const sync = (index) => {
-        highlightedMorpheme = index;
-        span.classList.remove("is-dismissed");
-        document.querySelectorAll(".caption-morpheme").forEach(other => {
-            if (other !== span) other.classList.remove("is-highlighted");
-        });
-        span.classList.toggle("is-highlighted", index !== null);
-        renderCaptionText(item);
+        setCaptionMorphemeSelection(index, span);
     };
     span.addEventListener("pointerenter", event => {
         span.classList.remove("is-dismissed");
@@ -717,16 +737,20 @@ function bindCaptionMorpheme(span, item, covering) {
     });
   }
 
-window.addEventListener("resize", () => {
-    const popup = document.querySelector(".caption-morpheme.is-highlighted .caption-morpheme-popup");
+function repositionOpenCaptionMorphemePopup() {
+    const popup = document.querySelector(".caption-morpheme.is-popup-anchor .caption-morpheme-popup");
     if (popup?.parentElement) positionCaptionMorphemePopup(popup.parentElement, popup);
-});
+}
+
+window.addEventListener("resize", repositionOpenCaptionMorphemePopup);
+window.visualViewport?.addEventListener("resize", repositionOpenCaptionMorphemePopup);
+window.visualViewport?.addEventListener("scroll", repositionOpenCaptionMorphemePopup);
   
   document.addEventListener("click", event => {
   if (event.target.closest?.(".caption-morpheme")) return;
   if (highlightedMorpheme !== null) {
-  highlightedMorpheme = null;
-  renderCaptionText(activeUtterance);
+  const activeSpan = document.querySelector(".caption-morpheme.is-popup-anchor");
+  setCaptionMorphemeSelection(null, activeSpan);
   }
   });
   
@@ -754,9 +778,12 @@ function morphemeColor(tag) {
 function renderCaptionText(item) {
     caption.replaceChildren();
     if (!item) return;
+    const content = document.createElement("span");
+    content.className = "caption-content";
+    caption.append(content);
     const text = item.text;
-    if (!captionsEnabled.checked || !morphologyEnabled.checked) {
-        caption.textContent = text;
+    if (!morphologyEnabled.checked) {
+        content.textContent = text;
         return;
     }
 
@@ -778,19 +805,26 @@ function renderCaptionText(item) {
         const segment = text.slice(start, end);
         const covering = ranges.filter(range => range.start <= start && range.end >= end);
         if (!covering.length) {
-            caption.append(document.createTextNode(segment));
+            content.append(document.createTextNode(segment));
             return;
         }
         const span = document.createElement("span");
         span.className = "caption-morpheme";
         span.textContent = segment;
+        captionMorphemeRanges.set(span, covering);
         const active = covering.find(range => range.index === highlightedMorpheme);
         const colorRange = active || covering[0];
         span.style.setProperty("--morpheme-color", morphemeColor(String(colorRange.tag)));
         span.classList.toggle("is-highlighted", Boolean(active));
         bindCaptionMorpheme(span, item, covering);
-        caption.append(span);
+        content.append(span);
     });
+    const popupAnchor = content.querySelector(".caption-morpheme.is-highlighted");
+    if (popupAnchor) {
+        popupAnchor.classList.add("is-popup-anchor");
+        const popup = popupAnchor.querySelector(".caption-morpheme-popup");
+        if (popup) positionCaptionMorphemePopup(popupAnchor, popup);
+    }
 }
 
 function escapeHtml(value) {
@@ -800,7 +834,8 @@ function escapeHtml(value) {
 }
 
 function updateCaption(item) {
-    if (!captionsEnabled.checked) {
+    const showRevealedCaption = item !== null && revealedUtterance === item;
+    if (!captionsEnabled.checked && !showRevealedCaption) {
         highlightedMorpheme = null;
         caption.textContent = "Captions are off";
         caption.classList.add("disabled");
@@ -839,6 +874,7 @@ function updateActiveUtterance(time) {
         }
     }
     if (current !== activeUtterance) {
+        highlightedMorpheme = null;
         activeUtterance = current;
         utteranceButtons.forEach(button => button.classList.remove("active"));
         const button = current ? utteranceButtons.get(current) : null;
@@ -870,6 +906,7 @@ playPause.addEventListener("click", () => {
         revealCandidate = null;
         revealedUtterance = null;
         syncUtteranceReveal(previousRevealCandidate);
+        updateCaption(activeUtterance);
     }
     requestPlayback(shouldPlay);
 });
@@ -897,6 +934,7 @@ progress.addEventListener("change", () => {
             revealCandidate = null;
             revealedUtterance = null;
             syncUtteranceReveal(previousRevealCandidate);
+            updateCaption(activeUtterance);
         }
         player.currentTime = targetTime;
         updateActiveUtterance(targetTime);
@@ -913,7 +951,6 @@ speed.addEventListener("input", () => {
 
 captionsEnabled.addEventListener("change", () => {
     savePreference("captionsEnabled", captionsEnabled.checked);
-    updateMorphologyAvailability();
     revealCandidate = null;
     revealedUtterance = null;
     updateCaption(activeUtterance);
@@ -921,8 +958,7 @@ captionsEnabled.addEventListener("change", () => {
 });
   morphologyEnabled.addEventListener("change", () => {
  savePreference("morphologyEnabled", morphologyEnabled.checked);
- renderCaptionText(activeUtterance);
- renderMorphology(activeUtterance);
+  updateCaption(activeUtterance);
   });
 hideShort.addEventListener("change", () => {
     savePreference("hideShort", hideShort.checked);
