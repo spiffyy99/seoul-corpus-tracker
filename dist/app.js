@@ -49,8 +49,6 @@ let pendingUtteranceStart = null;
 let pendingUtteranceSeek = null;
 let posTags = {};
 let highlightedMorpheme = null;
-// Keep the transcript from jumping when a multiline morphology caption is hidden.
-let reservedCaptionHeight = 0;
 
 // Utterance morpheme-type filter state. Empty set means no filter (show all).
 const selectedMorphTypes = new Set();
@@ -380,7 +378,6 @@ async function selectClip(name) {
     highlightedMorpheme = null;
     morphologyPanel.replaceChildren();
     morphologyPanel.hidden = true;
-    resetCaptionHeight();
     utteranceButtons.clear();
     utteranceList.scrollTop = 0;
     utteranceList.scrollLeft = 0;
@@ -1008,28 +1005,10 @@ function escapeHtml(value) {
     }[character]));
 }
 
-function resetCaptionHeight() {
-    reservedCaptionHeight = 0;
-    caption.style.removeProperty("min-height");
-}
-
-function reserveCaptionHeight() {
-    reservedCaptionHeight = Math.max(
-        reservedCaptionHeight,
-        caption.getBoundingClientRect().height
-    );
-    if (reservedCaptionHeight > 0) {
-        caption.style.minHeight = `${reservedCaptionHeight}px`;
-    }
-}
-
 function updateCaption(item) {
     const showRevealedCaption = item !== null && revealedUtterance === item;
     const captionsVisible = captionsEnabled.checked || showRevealedCaption;
     if (!captionsVisible) {
-        // Captions are off and nothing is revealed: collapse the caption box and
-        // clear any reserved height so it cannot permanently shrink the viewer.
-        resetCaptionHeight();
         highlightedMorpheme = null;
         caption.textContent = "Captions are off";
         caption.classList.add("disabled");
@@ -1037,14 +1016,6 @@ function updateCaption(item) {
         return;
     }
     caption.classList.remove("disabled");
-    // Only reserve a steady caption height while morphemes are actually shown.
-    // When morphemes are off the caption collapses back to its natural height so
-    // toggling morphology never leaves dead space that snaps the view around.
-    if (morphologyEnabled.checked) {
-        reserveCaptionHeight();
-    } else {
-        resetCaptionHeight();
-    }
     renderCaptionText(item);
     renderMorphology(item);
 }
@@ -1180,11 +1151,9 @@ captionsEnabled.addEventListener("change", () => {
     restoreViewportPosition();
 });
 morphologyEnabled.addEventListener("change", () => {
-    const restoreViewportPosition = captureViewportPosition();
     savePreference("morphologyEnabled", morphologyEnabled.checked);
     updateCaption(activeUtterance);
     updateMorphologyFilterVisibility();
-    restoreViewportPosition();
 });
 hideShort.addEventListener("change", () => {
     savePreference("hideShort", hideShort.checked);
