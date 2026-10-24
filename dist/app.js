@@ -839,7 +839,6 @@ function renderMorphologyFilter() {
         MORPHEME_TYPES.forEach(group => selectedMorphTypes.add(group.id));
         updateMorphologyFilterUI();
         renderUtterances();
-        closeMorphologyFilter();
     });
     const clearAll = document.createElement("button");
     clearAll.type = "button";
@@ -849,7 +848,6 @@ function renderMorphologyFilter() {
         selectedMorphTypes.clear();
         updateMorphologyFilterUI();
         renderUtterances();
-        closeMorphologyFilter();
     });
     actions.append(selectAll, clearAll);
     morphologyFilterList.append(actions);
@@ -866,7 +864,6 @@ function renderMorphologyFilter() {
             else selectedMorphTypes.delete(group.id);
             updateMorphologyFilterUI();
             renderUtterances();
-            closeMorphologyFilter();
         });
         const name = document.createElement("span");
         name.textContent = `${group.label} · ${group.ko}`;
@@ -936,7 +933,6 @@ const closeMorphologyFilterOnOutside = (event) => {
     }
 };
 window.addEventListener("mousedown", closeMorphologyFilterOnOutside);
-window.addEventListener("pointerdown", closeMorphologyFilterOnOutside);
 
 const MORPHEME_COLORS = [
     "#c2415d", "#2563a8", "#0f766e", "#9a6700", "#7c3aed",
@@ -1064,15 +1060,7 @@ function captureViewportPosition() {
         const previousScrollBehavior = root.style.scrollBehavior;
         root.style.scrollBehavior = "auto";
         const maxPageY = Math.max(0, root.scrollHeight - root.clientHeight);
-        if (pageY > maxPageY) {
-            const currentBuffer =
-                Number.parseFloat(root.style.getPropertyValue("--viewport-scroll-buffer")) || 0;
-            const extraBuffer = Math.ceil(pageY - maxPageY);
-            root.style.setProperty(
-                "--viewport-scroll-buffer",
-                `${currentBuffer + extraBuffer}px`
-            );
-        }
+        if (pageY > maxPageY) pageY = maxPageY;
         window.scrollTo(pageX, pageY);
         root.style.scrollBehavior = previousScrollBehavior;
         utteranceList.scrollLeft = listX;
