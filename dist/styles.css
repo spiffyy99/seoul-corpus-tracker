@@ -35,6 +35,13 @@ body {
     line-height: 1.5;
 }
 
+body::after {
+    display: block;
+    height: var(--viewport-scroll-buffer, 0px);
+    content: "";
+    pointer-events: none;
+}
+
 button, input { font: inherit; }
 button { color: inherit; }
 button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-visible {

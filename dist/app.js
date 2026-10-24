@@ -848,7 +848,7 @@ function resetCaptionHeight() {
 function reserveCaptionHeight() {
     reservedCaptionHeight = Math.max(
         reservedCaptionHeight,
-        Math.ceil(caption.getBoundingClientRect().height)
+        caption.getBoundingClientRect().height
     );
     if (reservedCaptionHeight > 0) {
         caption.style.minHeight = `${reservedCaptionHeight}px`;
@@ -882,6 +882,16 @@ function captureViewportPosition() {
         const root = document.documentElement;
         const previousScrollBehavior = root.style.scrollBehavior;
         root.style.scrollBehavior = "auto";
+        const maxPageY = Math.max(0, root.scrollHeight - root.clientHeight);
+        if (pageY > maxPageY) {
+            const currentBuffer =
+                Number.parseFloat(root.style.getPropertyValue("--viewport-scroll-buffer")) || 0;
+            const extraBuffer = Math.ceil(pageY - maxPageY);
+            root.style.setProperty(
+                "--viewport-scroll-buffer",
+                `${currentBuffer + extraBuffer}px`
+            );
+        }
         window.scrollTo(pageX, pageY);
         root.style.scrollBehavior = previousScrollBehavior;
         utteranceList.scrollLeft = listX;
