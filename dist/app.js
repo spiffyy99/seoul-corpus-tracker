@@ -46,6 +46,8 @@ let pendingUtteranceStart = null;
 let pendingUtteranceSeek = null;
 let posTags = {};
 let highlightedMorpheme = null;
+// Keep the transcript from jumping when a multiline morphology caption is hidden.
+let reservedCaptionHeight = 0;
 
 const utteranceCache = new Map();
 const utteranceButtons = new Map();
@@ -339,6 +341,7 @@ async function selectClip(name) {
     highlightedMorpheme = null;
     morphologyPanel.replaceChildren();
     morphologyPanel.hidden = true;
+    resetCaptionHeight();
     utteranceButtons.clear();
     utteranceList.scrollTop = 0;
     utteranceList.scrollLeft = 0;
@@ -833,7 +836,21 @@ function escapeHtml(value) {
     }[character]));
 }
 
+function resetCaptionHeight() {
+    reservedCaptionHeight = 0;
+    caption.style.removeProperty("min-height");
+}
+
 function updateCaption(item) {
+    if (!captionsEnabled.checked && morphologyEnabled.checked) {
+        reservedCaptionHeight = Math.max(
+            reservedCaptionHeight,
+            Math.ceil(caption.getBoundingClientRect().height)
+        );
+        if (reservedCaptionHeight > 0) {
+            caption.style.minHeight = `${reservedCaptionHeight}px`;
+        }
+    }
     const showRevealedCaption = item !== null && revealedUtterance === item;
     if (!captionsEnabled.checked && !showRevealedCaption) {
         highlightedMorpheme = null;
@@ -953,11 +970,13 @@ captionsEnabled.addEventListener("change", () => {
     savePreference("captionsEnabled", captionsEnabled.checked);
     revealCandidate = null;
     revealedUtterance = null;
+    if (captionsEnabled.checked) resetCaptionHeight();
     updateCaption(activeUtterance);
     renderUtterances();
 });
   morphologyEnabled.addEventListener("change", () => {
  savePreference("morphologyEnabled", morphologyEnabled.checked);
+  if (!morphologyEnabled.checked) resetCaptionHeight();
   updateCaption(activeUtterance);
   });
 hideShort.addEventListener("change", () => {
