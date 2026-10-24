@@ -845,15 +845,19 @@ function resetCaptionHeight() {
     caption.style.removeProperty("min-height");
 }
 
+function reserveCaptionHeight() {
+    reservedCaptionHeight = Math.max(
+        reservedCaptionHeight,
+        Math.ceil(caption.getBoundingClientRect().height)
+    );
+    if (reservedCaptionHeight > 0) {
+        caption.style.minHeight = `${reservedCaptionHeight}px`;
+    }
+}
+
 function updateCaption(item) {
-    if (!captionsEnabled.checked && morphologyEnabled.checked) {
-        reservedCaptionHeight = Math.max(
-            reservedCaptionHeight,
-            Math.ceil(caption.getBoundingClientRect().height)
-        );
-        if (reservedCaptionHeight > 0) {
-            caption.style.minHeight = `${reservedCaptionHeight}px`;
-        }
+    if (morphologyEnabled.checked || reservedCaptionHeight > 0) {
+        reserveCaptionHeight();
     }
     const showRevealedCaption = item !== null && revealedUtterance === item;
     if (!captionsEnabled.checked && !showRevealedCaption) {
@@ -992,7 +996,6 @@ captionsEnabled.addEventListener("change", () => {
     savePreference("captionsEnabled", captionsEnabled.checked);
     revealCandidate = null;
     revealedUtterance = null;
-    if (captionsEnabled.checked) resetCaptionHeight();
     updateCaption(activeUtterance);
     renderUtterances();
     restoreViewportPosition();
@@ -1000,7 +1003,7 @@ captionsEnabled.addEventListener("change", () => {
   morphologyEnabled.addEventListener("change", () => {
   const restoreViewportPosition = captureViewportPosition();
  savePreference("morphologyEnabled", morphologyEnabled.checked);
-  if (!morphologyEnabled.checked) resetCaptionHeight();
+  reserveCaptionHeight();
   updateCaption(activeUtterance);
   restoreViewportPosition();
   });
