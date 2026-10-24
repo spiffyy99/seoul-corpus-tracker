@@ -883,6 +883,41 @@ function closeMorphologyFilter() {
     }
 }
 
+function positionMorphologyFilter() {
+    const wrap = morphologyFilterWrap;
+    const list = morphologyFilterList;
+    if (!wrap || !list || list.hidden) return;
+    const wrapRect = wrap.getBoundingClientRect();
+    const listRect = list.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+
+    // Default: open below the button.
+    let offsetTop = wrapRect.height + 6;
+
+    // If there is no room below, flip above the button so the screen never shifts.
+    if (wrapRect.bottom + listRect.height > viewportHeight && wrapRect.top - listRect.height - 6 >= 0) {
+        offsetTop = -(listRect.height + 6);
+    }
+
+    list.style.top = `${offsetTop}px`;
+    list.style.bottom = "auto";
+
+    // Default: align the list's left edge with the button's left edge.
+    let offsetLeft = 0;
+
+    // Clamp horizontally so it never goes off the right edge on mobile.
+    if (wrapRect.left + listRect.width > viewportWidth - 8) {
+        offsetLeft = wrapRect.width - listRect.width;
+        if (wrapRect.left + offsetLeft < 8) {
+            offsetLeft = 8 - wrapRect.left;
+        }
+    }
+
+    list.style.left = `${offsetLeft}px`;
+    list.style.right = "auto";
+}
+
 function toggleMorphologyFilter() {
     morphFilterOpen = !morphFilterOpen;
     morphologyFilterList.hidden = !morphFilterOpen;
@@ -893,41 +928,15 @@ function toggleMorphologyFilter() {
     }
 }
 
-function positionMorphologyFilter() {
-    const wrap = morphologyFilterWrap;
-    const list = morphologyFilterList;
-    if (!wrap || !list || list.hidden) return;
-    const wrapRect = wrap.getBoundingClientRect();
-    const listRect = list.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-
-    // Vertical: default below the button; flip above when there is no room below.
-    let offsetTop = wrapRect.height + 6;
-    if (wrapRect.bottom + listRect.height > viewportHeight && wrapRect.top - listRect.height - 6 >= 0) {
-        offsetTop = -(listRect.height + 6);
+const closeMorphologyFilterOnOutside = (event) => {
+    if (morphFilterOpen && !morphologyFilterWrap.contains(event.target)) {
+        morphFilterOpen = false;
+        morphologyFilterList.hidden = true;
+        morphologyFilterButton.setAttribute("aria-expanded", "false");
     }
-
-    // Horizontal: default align the list's left edge with the wrap's left edge.
-    let offsetLeft = 0;
-    if (wrapRect.left + listRect.width > viewportWidth) {
-        offsetLeft = Math.max(8, viewportWidth - listRect.width - 8) - wrapRect.left;
-    } else if (wrapRect.left < 8) {
-        offsetLeft = 8 - wrapRect.left;
-    }
-
-    list.style.top = `${offsetTop}px`;
-    list.style.left = `${offsetLeft}px`;
-    list.style.right = "auto";
-    list.style.bottom = "auto";
-}
-
-window.addEventListener("resize", () => {
-    if (morphFilterOpen) positionMorphologyFilter();
-});
-window.visualViewport?.addEventListener("resize", () => {
-    if (morphFilterOpen) positionMorphologyFilter();
-});
+};
+window.addEventListener("mousedown", closeMorphologyFilterOnOutside);
+window.addEventListener("pointerdown", closeMorphologyFilterOnOutside);
 
 const MORPHEME_COLORS = [
     "#c2415d", "#2563a8", "#0f766e", "#9a6700", "#7c3aed",

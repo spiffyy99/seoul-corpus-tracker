@@ -590,12 +590,18 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     background: var(--surface);
     box-shadow: var(--shadow);
     padding: 10px;
-    z-index: 400;
-    display: flex;
+    z-index: 5000;
+    display: none;
     flex-direction: column;
     gap: 8px;
     scrollbar-color: #c9c8bd transparent;
     scrollbar-width: thin;
+}
+.filter-list:not([hidden]) {
+    display: flex;
+}
+.filter-list[hidden] {
+    display: none !important;
 }
 .filter-list::-webkit-scrollbar { width: 6px; }
 .filter-list::-webkit-scrollbar-thumb { background: #c9c8bd; border-radius: 3px; }
