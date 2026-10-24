@@ -1,0 +1,542 @@
+[1] 네
+  네/MM
+
+[2] 제 이름은
+  제/MM 이름/NNG 은/JX
+
+[3] 이고요
+  이/MM 고요/NNP
+
+[4] 아 열 여섯 살만 열여섯 살입니다
+  아/IC 열/NR 여섯/NR 살/NNB 만/JX 열여섯/NR 살/NNB 이/VCP ㅂ니다/EC
+
+[5] 남자요 네
+  남자/NNG 요/JX 네/MM
+
+[6] 네 이 학년 올라가요
+  네/MM 이/MM 학년/NNG 올라가/VV 요/EC
+
+[7] 저는 서울 차병원에서 태어났어
+  저/NP 는/JX 서울/NNP 차병원/NNP 에서/JKB 태어나/VV 았/EP 어/EC
+
+[8] <LAUGH-요>
+  </SS LAUGH/SL -/SS 요/NNP >/SS
+
+[9] 아니요
+  아니요/IC
+
+[10] 그 동네에서는
+  그/MM 동네/NNG 에서/JKB 는/JX
+
+[11] 아 태어나신 지역은
+  아/IC 태어나/VV 시/EP ㄴ/ETM 지역/NNG 은/JX
+
+[12] 서울
+  서울/NNP
+
+[13] 뭐
+  뭐/NP
+
+[14] 압구정
+  압구정/NNP
+
+[15] 네
+  네/MM
+
+[16] 지금도 압구정에서 살아요
+  지금/NNG 도/JX 압구정/NNP 에서/JKB 살/VV 아요/EC
+
+[17] 네
+  네/MM
+
+[18] 네 아파트요
+  네/MM 아파트/NNG 요/JX
+
+[19] 네
+  네/MM
+
+[20] 그렇죠
+  그렇/VA 죠/EC
+
+[21] 아니요 아버지가 할머니랑 친할 아 친할머니랑 친할아버지 설득하셔서
+  아니요/IC 아버지/NNG 가/JKS 할머니/NNG 랑/JKB 친하/VA ㄹ/ETM 아/IC 친할머니/NNG 랑/JKB 친할아버지/NNG 설득/NNG 하/XSV 시/EP 어서/EC
+
+[22] 서울에다 옮기
+  서울/NNP 에다/JKB 옮/VV 기/ETN
+
+[23] 시도록하셔서 지금은
+  시/VA 도록/EC 하/VX 시/EP 어서/EC 지금/NNG 은/JX
+
+[24] 다 서울에 사시고계세요
+  다/MAG 서울/NNP 에/JKB 살/VV 시/EP 고/EC 계/XSN 세요/NNP
+
+[25] 아니요 안 가 봤어요
+  아니요/IC 안/MAG 가/VV 아/EC 보/VV 았/EP 어요/EC
+
+[26] 네
+  네/MM
+
+[27] 어 아빠가
+  어/IC 아빠/NNG 가/JKS
+
+[28] 뭐
+  뭐/NP
+
+[29] 그러니깐
+  그러니깐/MAJ
+
+[30] 대학교 이후 생활은 자주 말씀해 주시는데
+  대학교/NNG 이후/NNG 생활/NNG 은/JX 자주/MAG 말씀/NNG 하/XSV 아/EC 주/VX 시/EP 는데/EC
+
+[31] 유년 생활은 딱히 말씀하시지 않으셔서
+  유년/NNP 생활/NNG 은/JX 딱히/MAG 말씀/NNG 하/XSV 시/EP 지/EC 않/VX 으시/EP 어서/EC
+
+[32] 네 별로 없어요
+  네/MM 별로/MAG 없/VA 어요/EC
+
+[33] 아뇨 이산 더
+  아뇨/IC 이산/NNP 더/MAG
+
+[34] 아냐 이사 한 번 했어요 아파트 다른아
+  아냐/IC 이사/NNG 한/MM 번/NNB 하/VV 았/EP 어요/EC 아파트/NNG 다른/MM 아/NNP
+
+[35] 압구정에서
+  압구정/NNP 에서/JKB
+
+[36] 압구정으로요
+  압구정/NNP 으로/JKB 요/JX
+
+[37] 네 그 동네
+  네/MM 그/MM 동네/NNG
+
+[38] 네 많이 변한 거 같아요
+  네/MM 많이/MAG 변하/VV ㄴ/ETM 것/NNB 같/VA 아요/EC
+
+[39] 어 일단 막으 시설들이 제가
+  어/IC 일단/MAG 막/VV 으/EC 시설/NNG 들/XSN 이/JKS 제/NP 가/JKS
+
+[40] 어
+  어/IC
+
+[41] 시설들이 제가 그
+  시설/NNG 들/XSN 이/JKS 제/NP 가/JKS 그/MM
+
+[42] 유년 생활 그러니깐 일곱 살 여덟 살 때보다
+  유년/NNP 생활/NNG 그러니깐/MAJ 일곱/NR 살/VV ㄹ/ETM 여덟/NR 살/VV ㄹ/ETM 때/NNG 보다/JKB
+
+[43] 진짜 훨씬 많이 나아진 거 같애요 거리도 정말 많이 변했고요
+  진짜/MAG 훨씬/MAG 많이/MAG 나아지/VV ㄴ/ETM 것/NNB 같/VA 애요/EF 거리/NNG 도/JX 정말/MAG 많이/MAG 변하/VV 았/EP 고요/NNP
+
+[44] 특히 가로수길 같은 곳에선 정말 많이 변했어요 가게도
+  특히/MAG 가로수길/NNP 같/VA 은/ETM 곳/NNG 에서/JKB ㄴ/JX 정말/MAG 많이/MAG 변하/VV 았/EP 어요/EC 가게/NNG 도/JX
+
+[45] 정말 좋은 게 많이 만들어지고요
+  정말/MAG 좋/VA 은/ETM 게/NNG 많이/MAG 만들어지/VV 고요/EC
+
+[46] <LAUGH-옌나레도조아쓰여>
+  </SS LAUGH/SL -/SS 예/NNG ㄴ/JX 나/JX 레/NNP 도조/NNP 아/EC 쓰이/VV 어/EC >/SS
+
+[47] 네 옛날에도 좋았어요
+  네/MM 옛날/NNG 에/JKB 도/JX 좋/VA 았/EP 어요/EC
+
+[48] 어아거기요저
+  어/VV 아/EC 거기/NP 이/VCP 오저/NNP
+
+[49] 초등학교 앞에 분식점이 있었거든요 그 분 되게 진짜 좋아했던 분식점인데 떡볶이가 진짜 맛있었는데
+  초등학교/NNG 앞/NNG 에/JKB 분식점/NNG 이/JKS 있/VX 었/EP 거든요/EF 그/MM 분/NNB 되/VV 게/EC 진짜/MAG 좋아하/VV 았/EP 던/ETM 분식점/NNG 이/VCP ㄴ데/EC 떡볶이/NNG 가/JKS 진짜/MAG 맛있/VA 었/EP 는데/EC
+
+[50] 그게 다 리모델링되면서
+  그/NP 게/JKB 다/MAG 리모델링/NNG 되/XSV 면서/EC
+
+[51] 쇼핑몰로
+  쇼핑몰/NNG 로/JKB
+
+[52] 쇼핑 거 뜸 비슷하게 됐어요
+  쇼핑/NNG 것/NNB 뜸/NNG 비슷/XR 하/XSA 게/EC 되/VV 었/EP 어요/EC
+
+[53] 네
+  네/MM
+
+[54] 없어요 저 외동이에요
+  없/VA 어요/EC 저/MM 외동/NNP 이/VCP 에요/EC
+
+[55] 네
+  네/MM
+
+[56] 네
+  네/MM
+
+[57] <LAUGH-네>
+  </SS LAUGH/SL -/SS 네/IC >/SS
+
+[58] 태몽은 딱히 없었
+  태몽/NNP 은/JX 딱히/MAG 없/VA 었/EP
+
+[59] <LAUGH-태요>
+  </SS LAUGH/SL -/SS 태/NNP 요/NNP >/SS
+
+[60] 네
+  네/MM
+
+[61] 아니요 괜찮아요 오히려 더 좋은 거 같아요
+  아니요/IC 괜찮/VA 아요/EC 오히려/MAG 더/MAG 좋/VA 은/ETM 것/NNB 같/VA 아요/EC
+
+[62] 그러니깐
+  그러니깐/MAJ
+
+[63] 엄마랑 아빠의 관심이다
+  엄마/NNG 랑/JKB 아빠/NNG 의/JKG 관심/NNG 이/VCP 다/EC
+
+[64] 저한테요 있으니깐
+  저/NP 한테/JKB 요/JX 있/VV 으니깐/EC
+
+[65] 훨씬 더 뭔가 안정되는 느낌이 있는 거 같아요
+  훨씬/MAG 더/MAG 무엇/NP ㄴ가/EC 안정/NNG 되/XSV 는/ETM 느낌/NNG 이/JKS 있/VV 는/ETM 것/NNB 같/VA 아요/EC
+
+[66] 가끔은 형이나
+  가끔/MAG 은/JX 형/NNG 이나/JC
+
+[67] 남동생이 있었으면
+  남동생/NNG 이/JKS 있/VX 었/EP 으면/EC
+
+[68] 좋았을 거 같아요
+  좋/VA 았/EP 을/ETM 것/NNB 같/VA 아요/EC
+
+[69] 네
+  네/MM
+
+[70] 네
+  네/MM
+
+[71] 네
+  네/MM
+
+[72] 당연히 어머니가 훨씬 더 많이 나눈 게 된 거 같아요
+  당연히/MAG 어머니/NNG 가/JKS 훨씬/MAG 더/MAG 많이/MAG 나누/VV ㄴ/ETM 게/NNG 되/VV ㄴ/ETM 것/NNB 같/VA 아요/EC
+
+[73] 아니요
+  아니요/IC
+
+[74] 일하시고계세요
+  일/NNG 하/XSV 시/EP 고/EC 계/XSN 세요/NNP
+
+[75] 네
+  네/MM
+
+[76] 그러니까 어려운 게 아니라 더
+  그러니까/MAJ 어렵/VA ㄴ/ETM 게/NNG 아니/VCN 라/EC 더/MAG
+
+[77] 그러니까 엄마가 훨씬 더 편한 거 같아요 말하기가
+  그러니까/MAJ 엄마/NNG 가/JKS 훨씬/MAG 더/MAG 편하/VA ㄴ/ETM 것/NNB 같/VA 아요/EC 말/NNG 하/XSV 기/ETN 가/JKS
+
+[78] 약간
+  약간/MAG
+
+[79] 네
+  네/MM
+
+[80] 그 공감대가 아니 그러니까
+  그/MM 공감대/NNG 가/JKS 아니/IC 그러니까/MAJ
+
+[81] 어머니가 좀
+  어머니/NNG 가/JKS 좀/MAG
+
+[82] 잘 들어주시거든요
+  잘/MAG 들어주/VV 시/EP 거든요/EF
+
+[83] 잘 들어 주시고 아버지는 많이 없으시고 집에
+  잘/MAG 들/VV 어/EC 주/VX 시/EP 고/EC 아버지/NNG 는/JX 많이/MAG 없/VA 으시/EP 고/EC 집/NNG 에/JKB
+
+[84] 바쁘셔서
+  바쁘/VA 시/EP 어서/EC
+
+[85] 그런 거 땜에요
+  그런/MM 것/NNB 땜/NNB 에/JKB 요/JX
+
+[86] 네 좀 더
+  네/MM 좀/MAG 더/MAG
+
+[87] 덜 바쁘세요
+  덜/MAG 바쁘/VA 시/EP 어요/EC
+
+[88] 거의 계속 한 일 년 정도 쉰 적은
+  것/NNB 의/JKG 계속/MAG 한/MM 일/NNG 년/NNB 정도/NNG 쉬/VV ㄴ/ETM 적/NNB 은/JX
+
+[89] 지만
+  지만/NNP
+
+[90] 거의 계속 일하셨어요
+  것/NNB 의/JKG 계속/MAG 일/NNG 하/XSV 시/EP 었/EP 어요/EC
+
+[91] 네 많죠
+  네/MM 많/VA 죠/EC
+
+[92] 좀 있었죠 어릴 어릴 때는 있었는데 지금 들어 보니까
+  좀/MAG 있/VX 었/EP 죠/EF 어리/VA ㄹ/ETM 어리/VA ㄹ/ETM 때/NNG 는/JX 있/VX 었/EP 는데/EC 지금/MAG 들/VV 어/EC 보/VV 니까/EC
+
+[93] 되게
+  되/VV 게/EC
+
+[94] 오히려 더 편한 거 같애요 혼자 있는 게
+  오히려/MAG 더/MAG 편하/VA ㄴ/ETM 것/NNB 같/VA 애요/EF 혼자/NNG 있/VV 는/ETM 게/NNG
+
+[95] 아 베이비시터가 한 옛날 정말 옛날엔 있었는데
+  아/IC 베이비시터/NNP 가/JKS 한/MM 옛날/NNG 정말/MAG 옛날/NNG 에/JKB 는/JX 있/VX 었/EP 는데/EC
+
+[96] 한 아홉 살 열 살 되니까 혼자 있었는데
+  한/MM 아홉/NR 살/VV ㄹ/ETM 열/NR 살/VV ㄹ/ETM 되/VV 니까/EC 혼자/NNG 있/VX 었/EP 는데/EC
+
+[97] 좀 그때는 많이 외로웠던 거 같애요
+  좀/MAG 그때/NNG 는/JX 많이/MAG 외롭/VA 었/EP 던/ETM 것/NNB 같/VA 애요/EF
+
+[98] 네
+  네/MM
+
+[99] 네 힘들었죠
+  네/MM 힘들/VA 었/EP 죠/EF
+
+[100] 네 좀 부러웠죠
+  네/MM 좀/MAG 부럽/VA 었/EP 죠/EF
+
+[101] 아니요 전혀요
+  아니요/IC 전하/VV 아요/EC
+
+[102] 쩌 엄마가 돈을 남겨 주시면
+  쩌/EF 엄마/NNG 가/JKS 돈/NNG 을/JKO 남기/VV 어/EC 주/VX 시/EP 면/EC
+
+[103] 그 돈을 가지고
+  그/MM 돈/NNG 을/JKO 가지/VV 고/EC
+
+[104] 제가 뭐 뭘 사 먹는다거나 그랬지
+  제/NP 가/JKS 뭐/NP 뭘/IC 사/NR 먹/VV 는다거나/EC 그렇/VA 었/EP 지/EC
+
+[105] 뭐 직접 제가 만들어 본다거나 그런 건 안 해 봤어
+  뭐/NP 직접/MAG 제/NP 가/JKS 만들/VV 어/EC 보/VV ㄴ다거나/EC 그런/MM 것/NNB ㄴ/JX 안/MAG 하/VV 아/EC 보/VV 았/EP 어/EC
+
+[106] 지금까지요
+  지금/NNG 까지/JX 요/JX
+
+[107] 라면도 하나 못 끓여요
+  라면/NNG 도/JX 하나/NR 못/MAG 끓이/VV 어요/EC
+
+[108] <LAUGH-네>
+  </SS LAUGH/SL -/SS 네/IC >/SS
+
+[109] 아 그런 적은 없었어요
+  아/IC 그런/MM 적/NNB 은/JX 없/VA 었/EP 어요/EC
+
+[110] 네
+  네/MM
+
+[111] 네 있죠
+  네/MM 있/VV 죠/EC
+
+[112] 어 일단
+  어/IC 일단/MAG
+
+[113] 엄마 아빠 둘 다 힘드셔서 일단 주말엔 좀 자주 무시고요
+  엄마/NNG 아빠/NNG 둘/NR 다/MAG 힘들/VA 시/EP 어서/EC 일단/MAG 주말/NNG 에/JKB 는/JX 좀/MAG 자주/MAG 무시/NNG 고요/NNG
+
+[114] 그리고 뭐
+  그리고/MAJ 뭐/NP
+
+[115] 정말
+  정말/MAG
+
+[116] 기억 나는 게 별로 없어요 정말
+  기억/NNG 나/NP 는/JX 게/NNG 별로/MAG 없/VA 어요/EC 정말/MAG
+
+[117] 많이 애
+  많이/MAG 애/NNG
+
+[118] 어떤 활동을 같이 하거나 그랬던 적은 없는 거 같애요 가족들 간의 추억이 뭐
+  어떤/MM 활동/NNG 을/JKO 같이/MAG 하/VV 거나/EC 그렇/VA 었/EP 던/ETM 적/NNB 은/JX 없/VA 는/ETM 것/NNB 같/VA 애요/EF 가족/NNG 들/XSN 간/NNB 의/JKG 추억/NNG 이/JKS 뭐/NP
+
+[119] 많이 있는 건 아니에요
+  많이/MAG 있/VV 는/ETM 것/NNB ㄴ/JX 아니/VCN 에요/EC
+
+[120] 네휴시
+  네/MM 휴/NNP 시/NNB
+
+[121] 휴식이라고 뭐
+  휴식/NNG 이/VCP 라고/EC 뭐/NP
+
+[122] 외식을 한다거나
+  외식/NNG 을/JKO 하/VV ㄴ다거나/EC
+
+[123] 아니면은 저는 제 할 일하고 아빠는 아빠 일리하고네여
+  아니면은/MAJ 저/NP 는/JX 제/MM 하/VV ㄹ/ETM 일/NNG 하/XSV 고/EC 아빠/NNG 는/JX 아빠/NNG 일리/NNG 하/XSV 고/EC 네/XSN 이/VCP 어/EC
+
+[124] 네 티브이 같이 보죠
+  네/MM 티브이/NNG 같이/MAG 보/VV 죠/EC
+
+[125] 근데 뭐 딱히
+  근데/MAJ 뭐/NP 딱히/MAG
+
+[126] <LAUGH-네>
+  </SS LAUGH/SL -/SS 네/IC >/SS
+
+[127] 네 각자 그냥 방에
+  네/MM 각자/MAG 그냥/MAG 방/NNG 에/JKB
+
+[128] 아니요 저는 뭐 제 친구들 만나거나 아니면 저
+  아니요/IC 저/NP 는/JX 뭐/NP 제/MM 친구/NNG 들/XSN 만나/VV 거나/EC 아니/VCN 면/EC 저/MM
+
+[129] 할릴 따로 하고
+  할릴/NNG 따로/MAG 하/VV 고/EC
+
+[130] 좀 개인 플레이가 좀 강한 거 같애요
+  좀/MAG 개인/NNG 플레이/NNG 가/JKS 좀/MAG 강하/VA ㄴ/ETM 것/NNB 같/VA 애요/EF
+
+[131] 네
+  네/MM
+
+[132] 아 엄마도 거의 안 해요
+  아/IC 엄마/NNG 도/JX 것/NNB 의/JKG 안/MAG 하/VV 아요/EC
+
+[133] 아줌마를 쓰시거든요
+  아줌마/NNG 를/JKO 쓰/VV 시/EP 거든요/EF
+
+[134] 네
+  네/MM
+
+[135] 네 네
+  네/MM 네/MM
+
+[136] 옛날에는 한 중학 일이 학년 때는 쩌 저랑 엄마
+  옛날/NNG 에/JKB 는/JX 한/MM 중학/NNG 일/NNG 이/JKS 학년/NNG 때/NNG 는/JX 쩌/EF 저/NP 랑/JKB 엄마/NNG
+
+[137] 엄마 아빠가
+  엄마/NNG 아빠/NNG 가/JKS
+
+[138] 한 팀이 되고 제가 혼자 돼서 이렇게 싸우는 분으 그 투쟁하는 편이 많았었는데
+  한/MM 팀/NNG 이/JKS 되/VV 고/EC 제/NP 가/JKS 혼자/NNG 되/VV 어서/EC 이렇게/MAG 싸우/VV 는/ETM 분/NNB 으/JKG 그/MM 투쟁/NNG 하/XSV 는/ETM 편/NNB 이/JKS 많/VA 았었/EP 는데/EC
+
+[139] 요즘은 아 엄마 아빠끼리 되게
+  요즘/NNG 은/JX 아/IC 엄마/NNG 아빠/NNG 끼리/XSN 되/VV 게/EC
+
+[140] 싸우셔서 저는 뭐
+  싸우/VV 시/EP 어서/EC 저/NP 는/JX 뭐/NP
+
+[141] 네
+  네/MM
+
+[142] 네 냉랭하죠
+  네/MM 냉랭/XR 하/XSA 죠/EC
+
+[143] 저는 집 아 방에 있고
+  저/NP 는/JX 집/NNG 아/IC 방/NNG 에/JKB 있/VV 고/EC
+
+[144] 공부를 하는 척하면서
+  공부/NNG 를/JKO 하/VV 는/ETM 척하/VX 면서/EC
+
+[145] 아빠랑 엄마는 그 싸우는 걸
+  아빠/NNG 랑/JKB 엄마/NNG 는/JX 그/MM 싸우/VV 는/ETM 걸/VV ㄹ/ETM
+
+[146] 가만히 들어 보려 그러면은
+  가만히/MAG 들/VV 어/EC 보/VV 려/EC 그러면은/MAJ
+
+[147] 생각해 보면 아 아빠가 잘못했다 아니면 엄마가 잘못했다 이게
+  생각/NNG 하/XSV 아/EC 보/VV 면/EC 아/IC 아빠/NNG 가/JKS 잘못/NNG 하/XSV 았/EP 다/EC 아니/VCN 면/EC 엄마/NNG 가/JKS 잘못/NNG 하/XSV 았/EP 다/EC 이/NP 이/VCP 게/EC
+
+[148] 파악만 할 뿐 저는 아무것도 개입은 안 해요
+  파악/NNG 만/JX 하/VV ㄹ/ETM 뿐/NNB 저/NP 는/JX 아무것/NNG 도/JX 개입/NNG 은/JX 안/MAG 하/VV 아요/EC
+
+[149] 네
+  네/MM
+
+[150] 거의
+  것/NNB 의/JKG
+
+[151] 아니요
+  아니요/IC
+
+[152] 오히려 아빠가 막 도와 달라고 그러는데
+  오히려/MAG 아빠/NNG 가/JKS 막/MAG 돕/VV 어/EC 달/VV 라고/EC 그렇/VA 는데/EC
+
+[153] 개입해 봤자 뭐 엄마 아빠
+  개입/NNG 하/XSV 아/EC 보/VV 았/EP 자/EC 뭐/NP 엄마/NNG 아빠/NNG
+
+[154] 둘 간의 싸움이지 저와는 전혀 관계가 없기 땜에 오히려
+  둘/NR 간/NNB 의/JKG 싸움/NNG 이/VCP 지/EC 저/NP 와/JKB 는/JX 전혀/MAG 관계/NNG 가/JKS 없/VA 기/ETN 땜/NNB 에/JKB 오히려/MAG
+
+[155] 제삼자가 들어가서도
+  제삼자/NNG 가/JKS 들어가/VV 아서/EC 도/JX
+
+[156] 낭패를 보는 수 있으니까
+  낭패/NNG 를/JKO 보/VV 는/ETM 수/NNB 있/VV 으니까/EC
+
+[157] 잘 해결하시라
+  잘/MAG 해결/NNG 하/XSV 시/EP 라/EC
+
+[158] 네 많죠 많았죠
+  네/MM 많/VA 죠/EC 많/VA 았/EP 죠/EF
+
+[159] 네 사춘기였죠
+  네/MM 사춘기/NNG 이/VCP 었/EP 죠/EF
+
+[160] 어 일단
+  어/IC 일단/MAG
+
+[161] 어
+  어/IC
+
+[162] <LAUGH-어>
+  </SS LAUGH/SL -/SS 이/VCP 어/EC >/SS
+
+[163] 좀 많이 그러니까 혼자 있기 때문에 좀 외로웠던 게 커서 그게 좀
+  좀/MAG 많이/MAG 그러니까/MAJ 혼자/NNG 있/VV 기/ETN 때문/NNB 에/JKB 좀/MAG 외롭/VA 었/EP 던/ETM 게/NNG 크/VA 어서/EC 그/NP 게/JKB 좀/MAG
+
+[164] 발단이 됐나 봐요 그래서 거 땜에 막
+  발단/NNG 이/JKS 되/VV 었/EP 나/EC 보/VV 아요/EC 그래서/MAJ 것/NNB 땜/NNB 에/JKB 막/MAG
+
+[165] 엄마한테 이유 없는 짜증도 부리고 막
+  엄마/NNG 한테/JKB 이유/NNG 없/VA 는/ETM 짜증/NNG 도/JX 부리/VV 고/EC 막/MAG
+
+[166] 여러 가지 많이 했었죠 많이
+  여러/MM 가지/NNB 많이/MAG 하/VV 았었/EP 죠/EF 많이/MAG
+
+[167] 말썽을 피웠었죠
+  말썽/NNG 을/JKO 피우/VV 었/EP 었/EP 죠/EF
+
+[168] 어
+  어/IC
+
+[169] 집을 안 들어간다거나
+  집/NNG 을/JKO 안/MAG 들어가/VV ㄴ다거나/EC
+
+[170] 네
+  네/MM
+
+[171] 그렇죠 가출이죠
+  그렇/VA 죠/EC 가출/NNG 이/VCP 죠/EC
+
+[172] 그 친구들이랑
+  그/MM 친구/NNG 들/XSN 이랑/JKB
+
+[173] 밤에서 계속 놀았어요
+  밤/NNG 에서/JKB 계속/MAG 놀/VV 았/EP 어요/EC
+
+[174] 네
+  네/MM
+
+[175] 자랑스러운 기억이 아니기 땜에
+  자랑스럽/VA ㄴ/ETM 기억/NNG 이/JKS 아니/VCN 기/ETN 땜/NNB 에/JKB
+
+[176] 미워했죠
+  미워하/VV 았/EP 죠/EF
+
+[177] 아니요 공원에서
+  아니요/IC 공원/NNG 에서/JKB
+
+[178] 날 밤을 샜다고 봐야 돼요
+  날/NNG 밤/NNG 을/JKO 새/VV 었/EP 다고/EC 보/VV 아야/EC 되/VV 어요/EC
+
+[179] 거의 그런 거죠
+  것/NNB 의/JKG 그런/MM 것/NNB 이/VCP 죠/EC
+
+[180] 거의 죽을 뻔했죠 엄마한테 아빠한테
+  것/NNB 의/JKG 죽/VV 을/ETM 뻔하/VA 았/EP 죠/EF 엄마/NNG 한테/JKB 아빠/NNG 한테/JKB
+
+[181] 그렇죠 반항이죠
+  그렇/VA 죠/EC 반항/NNG 이/VCP 죠/EC

@@ -24,6 +24,9 @@ const downloadTrack = document.querySelector("#download-track");
 const mainPanel = document.querySelector(".main-panel");
 const themeToggle = document.querySelector("#theme-toggle");
 const themeToggleLabel = document.querySelector("#theme-toggle-label");
+const morphologyFilterWrap = document.querySelector("#morphology-filter-wrap");
+const morphologyFilterButton = document.querySelector("#morphology-filter");
+const morphologyFilterList = document.querySelector("#morphology-filter-list");
 
 const PREFERENCES_KEY = "seoul-corpus-tracker.preferences.v1";
 let preferences = readPreferences();
@@ -48,6 +51,41 @@ let posTags = {};
 let highlightedMorpheme = null;
 // Keep the transcript from jumping when a multiline morphology caption is hidden.
 let reservedCaptionHeight = 0;
+
+// Utterance morpheme-type filter state. Empty set means no filter (show all).
+const selectedMorphTypes = new Set();
+let morphFilterOpen = false;
+
+// Morpheme type categories used for the utterance filter. An utterance matches
+// when it contains at least one morpheme belonging to a selected category.
+const MORPHEME_TYPES = [
+    { id: "verb", label: "Verb", ko: "동사", tags: ["VV", "VV-I", "VV-R", "VX", "XSV"] },
+    { id: "adjective", label: "Adjective", ko: "형용사", tags: ["VA", "VA-I", "VA-R", "XSA"] },
+    { id: "numeral", label: "Numeral", ko: "수사", tags: ["NR", "SN"] },
+    { id: "noun", label: "Noun", ko: "명사", tags: ["NNG", "NNP", "NNB", "XPN", "XSN"] },
+    { id: "pronoun", label: "Pronoun", ko: "대명사", tags: ["NP"] },
+    { id: "particle", label: "Particle", ko: "조사", tags: ["JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC"] },
+    { id: "adverb", label: "Adverb", ko: "부사", tags: ["MAG", "MAJ", "XSM"] },
+    { id: "ending", label: "Ending", ko: "어미", tags: ["EP", "EF", "EC", "ETN", "ETM"] },
+    { id: "copula", label: "Copula", ko: "지정사", tags: ["VCP", "VCN"] },
+    { id: "interjection", label: "Interjection", ko: "감탄사", tags: ["IC"] },
+    { id: "determiner", label: "Determiner", ko: "관형사", tags: ["MM"] },
+    { id: "punctuation", label: "Punctuation & symbols", ko: "기호", tags: ["SF", "SP", "SS", "SE", "SO", "SL", "SH", "W_URL", "W_MENTION", "W_HASHTAG", "Z_CODA", "XR", "NF", "NA"] },
+];
+
+const tagToType = new Map();
+MORPHEME_TYPES.forEach(group => {
+    group.tags.forEach(tag => tagToType.set(tag, group.id));
+});
+
+function morphemeType(tag) {
+    return tagToType.get(String(tag)) || null;
+}
+
+function matchesMorphologyFilter(item) {
+    if (selectedMorphTypes.size === 0) return true;
+    return item.morphology.some(entry => selectedMorphTypes.has(morphemeType(entry[1])));
+}
 
 const utteranceCache = new Map();
 const utteranceButtons = new Map();
@@ -144,6 +182,7 @@ function restorePreferences() {
     player.playbackRate = rate;
     applyTheme(preferences.theme);
     updateCaption(null);
+    updateMorphologyFilterVisibility();
 }
 
 function createEmptyState(title, message) {
@@ -403,7 +442,7 @@ function getVisibleUtterances() {
     return utterances.filter(item => {
         const matchesSearch = item.text.toLowerCase().includes(query);
         const characterCount = item.text.replace(/\s/g, "").length;
-        return matchesSearch && !(hideShort.checked && characterCount <= 3);
+        return matchesSearch && !(hideShort.checked && characterCount <= 3) && matchesMorphologyFilter(item);
     });
 }
 
@@ -759,12 +798,136 @@ window.visualViewport?.addEventListener("scroll", repositionOpenCaptionMorphemeP
   const activeSpan = document.querySelector(".caption-morpheme.is-popup-anchor");
   setCaptionMorphemeSelection(null, activeSpan);
   }
+  if (!morphologyFilterWrap.contains(event.target) && morphFilterOpen) {
+  morphFilterOpen = false;
+  morphologyFilterList.hidden = true;
+  morphologyFilterButton.setAttribute("aria-expanded", "false");
+  }
   });
   
   function renderMorphology() {
     morphologyPanel.replaceChildren();
     morphologyPanel.hidden = true;
 }
+
+function updateMorphologyFilterVisibility() {
+    morphologyFilterWrap.hidden = !morphologyEnabled.checked;
+    if (!morphologyEnabled.checked) {
+        selectedMorphTypes.clear();
+        updateMorphologyFilterUI();
+        renderUtterances();
+    }
+}
+
+function updateMorphologyFilterUI() {
+    morphologyFilterButton.setAttribute("aria-pressed", String(selectedMorphTypes.size > 0));
+    morphologyFilterList.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        input.checked = selectedMorphTypes.has(input.value);
+    });
+}
+
+function renderMorphologyFilter() {
+    morphologyFilterList.replaceChildren();
+
+    const actions = document.createElement("div");
+    actions.className = "filter-actions";
+    const selectAll = document.createElement("button");
+    selectAll.type = "button";
+    selectAll.textContent = "All";
+    selectAll.setAttribute("aria-label", "Select every morpheme type");
+    selectAll.addEventListener("click", () => {
+        MORPHEME_TYPES.forEach(group => selectedMorphTypes.add(group.id));
+        updateMorphologyFilterUI();
+        renderUtterances();
+        closeMorphologyFilter();
+    });
+    const clearAll = document.createElement("button");
+    clearAll.type = "button";
+    clearAll.textContent = "Clear all";
+    clearAll.setAttribute("aria-label", "Clear the morpheme filter (shows all utterances)");
+    clearAll.addEventListener("click", () => {
+        selectedMorphTypes.clear();
+        updateMorphologyFilterUI();
+        renderUtterances();
+        closeMorphologyFilter();
+    });
+    actions.append(selectAll, clearAll);
+    morphologyFilterList.append(actions);
+
+    MORPHEME_TYPES.forEach(group => {
+        const label = document.createElement("label");
+        label.className = "filter-option";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.value = group.id;
+        input.checked = selectedMorphTypes.has(group.id);
+        input.addEventListener("change", () => {
+            if (input.checked) selectedMorphTypes.add(group.id);
+            else selectedMorphTypes.delete(group.id);
+            updateMorphologyFilterUI();
+            renderUtterances();
+            closeMorphologyFilter();
+        });
+        const name = document.createElement("span");
+        name.textContent = `${group.label} · ${group.ko}`;
+        label.append(input, name);
+        morphologyFilterList.append(label);
+    });
+}
+
+function closeMorphologyFilter() {
+    if (morphFilterOpen) {
+        morphFilterOpen = false;
+        morphologyFilterList.hidden = true;
+        morphologyFilterButton.setAttribute("aria-expanded", "false");
+    }
+}
+
+function toggleMorphologyFilter() {
+    morphFilterOpen = !morphFilterOpen;
+    morphologyFilterList.hidden = !morphFilterOpen;
+    morphologyFilterButton.setAttribute("aria-expanded", String(morphFilterOpen));
+    if (morphFilterOpen) {
+        renderMorphologyFilter();
+        positionMorphologyFilter();
+    }
+}
+
+function positionMorphologyFilter() {
+    const wrap = morphologyFilterWrap;
+    const list = morphologyFilterList;
+    if (!wrap || !list || list.hidden) return;
+    const wrapRect = wrap.getBoundingClientRect();
+    const listRect = list.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+
+    // Vertical: default below the button; flip above when there is no room below.
+    let offsetTop = wrapRect.height + 6;
+    if (wrapRect.bottom + listRect.height > viewportHeight && wrapRect.top - listRect.height - 6 >= 0) {
+        offsetTop = -(listRect.height + 6);
+    }
+
+    // Horizontal: default align the list's left edge with the wrap's left edge.
+    let offsetLeft = 0;
+    if (wrapRect.left + listRect.width > viewportWidth) {
+        offsetLeft = Math.max(8, viewportWidth - listRect.width - 8) - wrapRect.left;
+    } else if (wrapRect.left < 8) {
+        offsetLeft = 8 - wrapRect.left;
+    }
+
+    list.style.top = `${offsetTop}px`;
+    list.style.left = `${offsetLeft}px`;
+    list.style.right = "auto";
+    list.style.bottom = "auto";
+}
+
+window.addEventListener("resize", () => {
+    if (morphFilterOpen) positionMorphologyFilter();
+});
+window.visualViewport?.addEventListener("resize", () => {
+    if (morphFilterOpen) positionMorphologyFilter();
+});
 
 const MORPHEME_COLORS = [
     "#c2415d", "#2563a8", "#0f766e", "#9a6700", "#7c3aed",
@@ -856,11 +1019,12 @@ function reserveCaptionHeight() {
 }
 
 function updateCaption(item) {
-    if (morphologyEnabled.checked || reservedCaptionHeight > 0) {
-        reserveCaptionHeight();
-    }
     const showRevealedCaption = item !== null && revealedUtterance === item;
-    if (!captionsEnabled.checked && !showRevealedCaption) {
+    const captionsVisible = captionsEnabled.checked || showRevealedCaption;
+    if (!captionsVisible) {
+        // Captions are off and nothing is revealed: collapse the caption box and
+        // clear any reserved height so it cannot permanently shrink the viewer.
+        resetCaptionHeight();
         highlightedMorpheme = null;
         caption.textContent = "Captions are off";
         caption.classList.add("disabled");
@@ -868,6 +1032,14 @@ function updateCaption(item) {
         return;
     }
     caption.classList.remove("disabled");
+    // Only reserve a steady caption height while morphemes are actually shown.
+    // When morphemes are off the caption collapses back to its natural height so
+    // toggling morphology never leaves dead space that snaps the view around.
+    if (morphologyEnabled.checked) {
+        reserveCaptionHeight();
+    } else {
+        resetCaptionHeight();
+    }
     renderCaptionText(item);
     renderMorphology(item);
 }
@@ -1010,19 +1182,23 @@ captionsEnabled.addEventListener("change", () => {
     renderUtterances();
     restoreViewportPosition();
 });
-  morphologyEnabled.addEventListener("change", () => {
-  const restoreViewportPosition = captureViewportPosition();
- savePreference("morphologyEnabled", morphologyEnabled.checked);
-  reserveCaptionHeight();
-  updateCaption(activeUtterance);
-  restoreViewportPosition();
-  });
+morphologyEnabled.addEventListener("change", () => {
+    const restoreViewportPosition = captureViewportPosition();
+    savePreference("morphologyEnabled", morphologyEnabled.checked);
+    updateCaption(activeUtterance);
+    updateMorphologyFilterVisibility();
+    restoreViewportPosition();
+});
 hideShort.addEventListener("change", () => {
     savePreference("hideShort", hideShort.checked);
     renderUtterances();
 });
 clipSearch.addEventListener("input", renderClips);
 utteranceSearch.addEventListener("input", renderUtterances);
+morphologyFilterButton.addEventListener("click", event => {
+    event.stopPropagation();
+    toggleMorphologyFilter();
+});
 nextTrack.addEventListener("click", () => chooseNextTrack());
 randomTrack.addEventListener("click", () => chooseNextTrack(true));
 downloadTrack.addEventListener("click", event => {

@@ -108,8 +108,14 @@
 
                 <section aria-labelledby="transcript-label">
                     <div class="transcript-tools">
-                        <label id="transcript-label" for="utterance-search">Transcript search</label>
                         <input id="utterance-search" class="search-input transcript-search" type="search" placeholder="Search Korean text…" autocomplete="off">
+                        <div id="morphology-filter-wrap" class="morphology-filter-wrap" hidden>
+                            <button id="morphology-filter" type="button" class="filter-button" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter utterances by morpheme type">
+                                <svg class="filter-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 6h14M3 10h10M3 14h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <svg class="filter-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <div id="morphology-filter-list" class="filter-list" hidden></div>
+                        </div>
                     </div>
                     <div class="transcript-meta">
                         <p id="utterance-count"></p>
