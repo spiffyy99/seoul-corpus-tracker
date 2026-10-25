@@ -640,7 +640,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     flex: 1;
     overflow-anchor: none;
     align-content: start;
-    grid-template-columns: max-content;
+    grid-template-columns: 1fr;
     gap: 7px;
     overflow: auto;
     overscroll-behavior: contain;
@@ -668,8 +668,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     --reveal-control-width: 88px;
     --reveal-control-gap: 8px;
     display: grid;
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
+    min-width: 0;
     grid-template-columns: minmax(0, 1fr) 0;
     align-items: stretch;
     column-gap: 0;

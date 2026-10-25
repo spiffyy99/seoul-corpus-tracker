@@ -55,27 +55,10 @@ let highlightedMorpheme = null;
 const selectedMorphTypes = new Set();
 let morphFilterOpen = false;
 
-// Morpheme type categories used for the utterance filter. An utterance matches
-// when it contains at least one morpheme belonging to a selected category.
-const MORPHEME_TYPES = [
-    { id: "verb", label: "Verb", ko: "동사", tags: ["VV", "VV-I", "VV-R", "VX", "XSV"] },
-    { id: "adjective", label: "Adjective", ko: "형용사", tags: ["VA", "VA-I", "VA-R", "XSA"] },
-    { id: "numeral", label: "Numeral", ko: "수사", tags: ["NR", "SN"] },
-    { id: "noun", label: "Noun", ko: "명사", tags: ["NNG", "NNP", "NNB", "XPN", "XSN"] },
-    { id: "pronoun", label: "Pronoun", ko: "대명사", tags: ["NP"] },
-    { id: "particle", label: "Particle", ko: "조사", tags: ["JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC"] },
-    { id: "adverb", label: "Adverb", ko: "부사", tags: ["MAG", "MAJ", "XSM"] },
-    { id: "ending", label: "Ending", ko: "어미", tags: ["EP", "EF", "EC", "ETN", "ETM"] },
-    { id: "copula", label: "Copula", ko: "지정사", tags: ["VCP", "VCN"] },
-    { id: "interjection", label: "Interjection", ko: "감탄사", tags: ["IC"] },
-    { id: "determiner", label: "Determiner", ko: "관형사", tags: ["MM"] },
-    { id: "punctuation", label: "Punctuation & symbols", ko: "기호", tags: ["SF", "SP", "SS", "SE", "SO", "SL", "SH", "W_URL", "W_MENTION", "W_HASHTAG", "Z_CODA", "XR", "NF", "NA"] },
-];
-
-const tagToType = new Map();
-MORPHEME_TYPES.forEach(group => {
-    group.tags.forEach(tag => tagToType.set(tag, group.id));
-});
+// Morpheme type categories, loaded from morphology_categories.json.
+// Each category maps to Kiwi POS tags from pos_tags.json.
+let MORPH_CATEGORIES = [];
+let tagToType = new Map();
 
 function morphemeType(tag) {
     return tagToType.get(String(tag)) || null;
@@ -833,7 +816,7 @@ function renderMorphologyFilter() {
     selectAll.textContent = "All";
     selectAll.setAttribute("aria-label", "Select every morpheme type");
     selectAll.addEventListener("click", () => {
-        MORPHEME_TYPES.forEach(group => selectedMorphTypes.add(group.id));
+        MORPH_CATEGORIES.forEach(group => selectedMorphTypes.add(group.id));
         updateMorphologyFilterUI();
         renderUtterances();
     });
@@ -849,7 +832,7 @@ function renderMorphologyFilter() {
     actions.append(selectAll, clearAll);
     morphologyFilterList.append(actions);
 
-    MORPHEME_TYPES.forEach(group => {
+    MORPH_CATEGORIES.forEach(group => {
         const label = document.createElement("label");
         label.className = "filter-option";
         const input = document.createElement("input");
@@ -1227,8 +1210,17 @@ player.addEventListener("error", () => {
 
 async function init() {
     try {
-        const [data, tagData] = await Promise.all([getJson("clips.json"), getJson("pos_tags.json")]);
+        const [data, tagData, morphData] = await Promise.all([
+            getJson("clips.json"),
+            getJson("pos_tags.json"),
+            getJson("morphology_categories.json"),
+        ]);
         posTags = tagData.tags || {};
+        MORPH_CATEGORIES = morphData.categories || [];
+        tagToType = new Map();
+        MORPH_CATEGORIES.forEach(group => {
+            group.tags.forEach(tag => tagToType.set(tag, group.id));
+        });
         clips = data
             .filter(name => typeof name === "string")
             .map(name => name.replace(/\.json$/, ""))

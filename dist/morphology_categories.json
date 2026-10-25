@@ -1,0 +1,184 @@
+{
+  "categories": [
+    {
+      "id": "common-nouns",
+      "label": "Common Nouns",
+      "ko": "일반 명사",
+      "tags": ["NNG", "NNB", "NF"]
+    },
+    {
+      "id": "proper-nouns",
+      "label": "Proper Nouns",
+      "ko": "고유 명사",
+      "tags": ["NNP"]
+    },
+    {
+      "id": "pronouns",
+      "label": "Pronouns",
+      "ko": "대명사",
+      "tags": ["NP"]
+    },
+    {
+      "id": "numerals",
+      "label": "Numerals & Numbers",
+      "ko": "수사 / 숫자",
+      "tags": ["NR", "SN"]
+    },
+    {
+      "id": "verbs",
+      "label": "Action Verbs",
+      "ko": "동사",
+      "tags": ["VV", "VV-I", "VV-R", "NV"]
+    },
+    {
+      "id": "adjectives",
+      "label": "Descriptive Adjectives",
+      "ko": "형용사",
+      "tags": ["VA", "VA-I", "VA-R"]
+    },
+    {
+      "id": "auxiliary-predicates",
+      "label": "Auxiliary Predicates",
+      "ko": "보조 용언",
+      "tags": ["VX"]
+    },
+    {
+      "id": "copulas",
+      "label": "Copulas (is/are)",
+      "ko": "지정사",
+      "tags": ["VCP", "VCN"]
+    },
+    {
+      "id": "determiners",
+      "label": "Determiners",
+      "ko": "관형사",
+      "tags": ["MM"]
+    },
+    {
+      "id": "general-adverbs",
+      "label": "General Adverbs",
+      "ko": "일반 부사",
+      "tags": ["MAG", "XSM"]
+    },
+    {
+      "id": "conjunctive-adverbs",
+      "label": "Conjunctive Adverbs",
+      "ko": "접속 부사",
+      "tags": ["MAJ"]
+    },
+    {
+      "id": "interjections",
+      "label": "Interjections",
+      "ko": "감탄사",
+      "tags": ["IC"]
+    },
+    {
+      "id": "case-particles",
+      "label": "Case Particles",
+      "ko": "격 조사",
+      "tags": ["JKS", "JKO", "JKB", "JKG", "JKC", "JKV", "JKQ"]
+    },
+    {
+      "id": "auxiliary-particles",
+      "label": "Auxiliary & Conjunctive Particles",
+      "ko": "보조사 / 접속 조사",
+      "tags": ["JX", "JC"]
+    },
+    {
+      "id": "pre-final-endings",
+      "label": "Pre-final Endings",
+      "ko": "선어말 어미",
+      "tags": ["EP"]
+    },
+    {
+      "id": "final-endings",
+      "label": "Final Endings",
+      "ko": "종결 어미",
+      "tags": ["EF"]
+    },
+    {
+      "id": "conjunctive-endings",
+      "label": "Conjunctive Endings",
+      "ko": "연결 어미",
+      "tags": ["EC"]
+    },
+    {
+      "id": "nominalizing-endings",
+      "label": "Nominalizing Endings",
+      "ko": "명사형 어미",
+      "tags": ["ETN"]
+    },
+    {
+      "id": "adnominalizing-endings",
+      "label": "Adnominalizing Endings",
+      "ko": "관형사형 어미",
+      "tags": ["ETM"]
+    },
+    {
+      "id": "noun-prefixes-suffixes",
+      "label": "Noun Prefixes & Suffixes",
+      "ko": "명사 접두사 / 접미사",
+      "tags": ["XPN", "XSN"]
+    },
+    {
+      "id": "verb-suffixes",
+      "label": "Verb Derivational Suffixes",
+      "ko": "동사 파생 접미사",
+      "tags": ["XSV"]
+    },
+    {
+      "id": "adjective-suffixes",
+      "label": "Adjective Derivational Suffixes",
+      "ko": "형용사 파생 접미사",
+      "tags": ["XSA"]
+    },
+    {
+      "id": "root-morphemes",
+      "label": "Root Morphemes",
+      "ko": "어근",
+      "tags": ["XR"]
+    },
+    {
+      "id": "sentence-punctuation",
+      "label": "Sentence-final Punctuation",
+      "ko": "마침표 / 물음표 / 느낌표",
+      "tags": ["SF"]
+    },
+    {
+      "id": "separator-punctuation",
+      "label": "Separator Punctuation",
+      "ko": "구분 부호",
+      "tags": ["SP", "SO"]
+    },
+    {
+      "id": "quotes-brackets",
+      "label": "Quotation & Brackets",
+      "ko": "따옴표 / 괄호 / 줄임표",
+      "tags": ["SS", "SE"]
+    },
+    {
+      "id": "foreign-words",
+      "label": "Foreign Words & Alphabet",
+      "ko": "외국어 / 알파벳 / 한자",
+      "tags": ["SL", "SH"]
+    },
+    {
+      "id": "web-entities",
+      "label": "URLs, Mentions & Hashtags",
+      "ko": "URL / 멘션 / 해시태그",
+      "tags": ["W_URL", "W_MENTION", "W_HASHTAG"]
+    },
+    {
+      "id": "slang-tail",
+      "label": "Slang Tail Consonants",
+      "ko": "구어체 덧붙은 받침",
+      "tags": ["Z_CODA"]
+    },
+    {
+      "id": "unknown",
+      "label": "Unknown / Unanalyzable",
+      "ko": "분석 불가능 단어",
+      "tags": ["NA"]
+    }
+  ]
+}
