@@ -47,6 +47,7 @@ let playbackRequestId = 0;
 let utteranceRequestId = 0;
 let pendingUtteranceStart = null;
 let pendingUtteranceSeek = null;
+let pendingAudioUrl = null;
 let posTags = {};
 let highlightedMorpheme = null;
 
@@ -418,13 +419,12 @@ async function selectClip(name) {
         renderUtterances();
         setEstimatedDuration();
         const audioUrl = `/api/clips/${encodeURIComponent(name)}/play`;
-        player.src = audioUrl;
+        pendingAudioUrl = audioUrl;
         downloadTrack.href = audioUrl;
         downloadTrack.download = `${name}.opus`;
         downloadTrack.classList.remove("is-disabled");
         downloadTrack.setAttribute("aria-disabled", "false");
         player.playbackRate = Number(speed.value);
-        player.load();
         playPause.disabled = estimatedDuration <= 0;
         setStatus(`${utterances.length} utterances loaded · select a line to listen closely`);
     } catch (error) {
@@ -540,12 +540,10 @@ function syncUtteranceReveal(item) {
         revealButton.disabled = true;
         revealButton.setAttribute("aria-hidden", "true");
         revealButton.addEventListener("click", () => {
-            const restoreViewportPosition = captureViewportPosition();
             const shouldReveal = revealedUtterance !== item;
             revealedUtterance = shouldReveal ? item : null;
             syncUtteranceReveal(item);
             if (activeUtterance === item) updateCaption(item);
-            restoreViewportPosition();
         });
         row.append(revealButton);
         revealButtonAfterSlotOpens(row, revealButton);
@@ -601,7 +599,6 @@ function renderUtterances() {
 }
 
 async function playUtterance(item) {
-    const restoreViewportPosition = captureViewportPosition();
     const thisSelection = selectionId;
     const thisUtteranceRequest = ++utteranceRequestId;
     cancelPendingUtteranceStart();
@@ -632,7 +629,6 @@ async function playUtterance(item) {
         scrollActiveUtteranceIntoView(button);
     }
     updateCaption(item);
-    restoreViewportPosition();
 
     const seekAndPlay = async () => {
         if (pendingUtteranceStart === seekAndPlay) {
@@ -659,6 +655,10 @@ async function playUtterance(item) {
         }
     };
 
+    if (!player.src && pendingAudioUrl) {
+        player.src = pendingAudioUrl;
+        await new Promise(resolve => player.addEventListener("loadedmetadata", resolve, { once: true }));
+    }
     if (player.readyState >= 1) {
         await seekAndPlay();
     } else {
@@ -1090,7 +1090,11 @@ function chooseNextTrack(random = false) {
     selectClip(clips[index < 0 ? 0 : (index + 1) % clips.length]);
 }
 
-playPause.addEventListener("click", () => {
+playPause.addEventListener("click", async () => {
+    if (!player.src && pendingAudioUrl) {
+        player.src = pendingAudioUrl;
+        await new Promise(resolve => player.addEventListener("loadedmetadata", resolve, { once: true }));
+    }
     if (!player.src) return;
     const shouldPlay = !playbackIntent && (player.paused || player.ended);
     if (shouldPlay && activeUtteranceEnd === null && revealCandidate !== null) {
@@ -1142,13 +1146,11 @@ speed.addEventListener("input", () => {
 });
 
 captionsEnabled.addEventListener("change", () => {
-    const restoreViewportPosition = captureViewportPosition();
     savePreference("captionsEnabled", captionsEnabled.checked);
     revealCandidate = null;
     revealedUtterance = null;
     updateCaption(activeUtterance);
     renderUtterances();
-    restoreViewportPosition();
 });
 morphologyEnabled.addEventListener("change", () => {
     savePreference("morphologyEnabled", morphologyEnabled.checked);
