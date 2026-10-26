@@ -807,7 +807,7 @@ function updateMorphologyFilterUI() {
 }
 
 function renderMorphologyFilter() {
-    morphologyFilterList.replaceChildren();
+    const fragment = document.createDocumentFragment();
 
     const actions = document.createElement("div");
     actions.className = "filter-actions";
@@ -830,7 +830,7 @@ function renderMorphologyFilter() {
         renderUtterances();
     });
     actions.append(selectAll, clearAll);
-    morphologyFilterList.append(actions);
+    fragment.append(actions);
 
     MORPH_CATEGORIES.forEach(group => {
         const label = document.createElement("label");
@@ -848,8 +848,10 @@ function renderMorphologyFilter() {
         const name = document.createElement("span");
         name.textContent = `${group.label} · ${group.ko}`;
         label.append(input, name);
-        morphologyFilterList.append(label);
+        fragment.append(label);
     });
+
+    morphologyFilterList.replaceChildren(fragment);
 }
 
 function closeMorphologyFilter() {
@@ -897,11 +899,15 @@ function positionMorphologyFilter() {
 
 function toggleMorphologyFilter() {
     morphFilterOpen = !morphFilterOpen;
-    morphologyFilterList.hidden = !morphFilterOpen;
     morphologyFilterButton.setAttribute("aria-expanded", String(morphFilterOpen));
     if (morphFilterOpen) {
+        const restoreViewportPosition = captureViewportPosition();
+        morphologyFilterList.hidden = false;
         renderMorphologyFilter();
         positionMorphologyFilter();
+        restoreViewportPosition();
+    } else {
+        morphologyFilterList.hidden = true;
     }
 }
 
@@ -1035,7 +1041,7 @@ function scrollActiveUtteranceIntoView(button) {
     }
 
     if (scrollDelta) {
-        utteranceList.scrollBy({ top: scrollDelta, behavior: "smooth" });
+        utteranceList.scrollBy({ top: scrollDelta });
     }
 }
 

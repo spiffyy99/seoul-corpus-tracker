@@ -559,7 +559,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .transcript-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 7px 0 4px; }
 .transcript-tools label { color: var(--ink-soft); font-size: 0.8rem; font-weight: 650; }
 .transcript-search { width: min(250px, 55%); margin: 0; padding-left: 13px; }
-.morphology-filter-wrap { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.morphology-filter-wrap { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; overflow-anchor: none; }
 .filter-button {
     display: inline-flex;
     align-items: center;
@@ -597,6 +597,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     gap: 8px;
     scrollbar-color: #c9c8bd transparent;
     scrollbar-width: thin;
+    contain: layout;
 }
 .filter-list:not([hidden]) {
     display: flex;
