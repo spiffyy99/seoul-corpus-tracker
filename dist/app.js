@@ -795,7 +795,6 @@ function updateMorphologyFilterVisibility() {
     if (!morphologyEnabled.checked) {
         selectedMorphTypes.clear();
         updateMorphologyFilterUI();
-        renderUtterances();
     }
 }
 

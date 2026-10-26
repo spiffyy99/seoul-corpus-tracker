@@ -525,6 +525,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     padding: 13px clamp(16px, 4vw, 42px);
     border: 1px solid #dce4da;
     border-radius: 14px;
+    overflow-anchor: none;
     background:
         linear-gradient(120deg, rgba(220, 238, 232, 0.56), rgba(229, 234, 251, 0.56)),
         #f8faf4;
