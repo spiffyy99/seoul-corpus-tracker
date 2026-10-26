@@ -655,7 +655,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     display: grid;
     width: max-content;
     min-width: 100%;
-    grid-template-columns: 92px max-content;
+    grid-template-columns: 92px minmax(0, 1fr);
     align-items: start;
     gap: 14px;
     padding: 13px 14px;
@@ -744,7 +744,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     font-family: var(--font-reading);
     font-size: 1rem;
     line-height: 1.65;
-    white-space: pre;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 .utterance.active .utterance-text { color: #293b77; }
 
