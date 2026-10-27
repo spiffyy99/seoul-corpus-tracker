@@ -9,6 +9,7 @@ const clipTitle = document.querySelector("#clip-title");
 const speed = document.querySelector("#speed");
 const speedValue = document.querySelector("#speed-value");
 const volumeBtn = document.querySelector("#volume-btn");
+const volumeSliderWrap = document.querySelector("#volume-slider-wrap");
 const volumeSlider = document.querySelector("#volume-slider");
 const volumeIcon = document.querySelector("#volume-icon");
 const captionsEnabled = document.querySelector("#captions-enabled");
@@ -166,13 +167,14 @@ function restorePreferences() {
     speedValue.textContent = `${rate.toFixed(2)}×`;
     player.playbackRate = rate;
     const savedVol = Number(preferences.volume);
-    if (Number.isFinite(savedVol) && savedVol >= 0 && savedVol <= 2) {
+    if (Number.isFinite(savedVol) && savedVol >= 0 && savedVol <= Number(volumeSlider.max)) {
         volumeSlider.value = String(savedVol);
     }
     const vol = Number(volumeSlider.value);
     if (vol <= 0) volumeIcon.className = "fas fa-volume-mute";
-    else if (vol <= 1.5) volumeIcon.className = "fas fa-volume-down";
+    else if (vol <= Number(volumeSlider.max) / 2) volumeIcon.className = "fas fa-volume-down";
     else volumeIcon.className = "fas fa-volume-up";
+    player.volume = Math.min(Math.max(vol, 0), 1);
     applyTheme(preferences.theme);
     updateCaption(null);
     updateMorphologyFilterVisibility();
@@ -945,7 +947,12 @@ const closeMorphologyFilterOnOutside = (event) => {
         morphologyFilterButton.setAttribute("aria-expanded", "false");
     }
 };
-window.addEventListener("mousedown", closeMorphologyFilterOnOutside);
+window.addEventListener("mousedown", (event) => {
+    if (!volumeSliderWrap.contains(event.target) && !volumeBtn.contains(event.target)) {
+        volumeSliderWrap.classList.add("hidden");
+    }
+    closeMorphologyFilterOnOutside(event);
+});
 
 const MORPHEME_COLORS = [
     "#c2415d", "#2563a8", "#0f766e", "#9a6700", "#7c3aed",
@@ -1182,36 +1189,17 @@ speed.addEventListener("input", () => {
     savePreference("speed", rate);
 });
 
-let audioCtx, gainNode;
-function ensureAudioGraph() {
-    if (audioCtx) return audioCtx;
-    try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === "suspended") audioCtx.resume();
-        gainNode = audioCtx.createGain();
-        gainNode.gain.value = Number(volumeSlider.value);
-        const source = audioCtx.createMediaElementSource(player);
-        source.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-    } catch (e) {
-        console.error("Volume graph failed:", e);
-        return null;
-    }
-    return audioCtx;
-}
-
 volumeBtn.addEventListener("click", (event) => {
     if (event.target.closest("#volume-slider-wrap")) return;
-    const wrap = document.querySelector("#volume-slider-wrap");
-    wrap.classList.toggle("hidden");
+    volumeSliderWrap.classList.toggle("hidden");
 });
 
 volumeSlider.addEventListener("input", () => {
     const vol = Number(volumeSlider.value);
-    ensureAudioGraph();
-    gainNode.gain.value = vol;
+    const halfMax = Number(volumeSlider.max) / 2;
+    player.volume = Math.min(Math.max(vol, 0), 1);
     if (vol <= 0) volumeIcon.className = "fas fa-volume-mute";
-    else if (vol <= 0.5) volumeIcon.className = "fas fa-volume-down";
+    else if (vol <= halfMax) volumeIcon.className = "fas fa-volume-down";
     else volumeIcon.className = "fas fa-volume-up";
     savePreference("volume", vol);
 });
