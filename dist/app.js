@@ -74,8 +74,67 @@ function matchesMorphologyFilter(item) {
 }
 
 const utteranceCache = new Map();
+const audioCache = new Map();
 const utteranceButtons = new Map();
 const captionMorphemeRanges = new WeakMap();
+
+const IDB_NAME = "seoul-corpus-tracker";
+const IDB_STORE = "audio-blobs";
+let idbDb = null;
+
+function openIdb() {
+    return new Promise((resolve, reject) => {
+        if (idbDb) return resolve(idbDb);
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => {
+            req.result.createObjectStore(IDB_STORE, { keyPath: "name" });
+        };
+        req.onsuccess = () => {
+            idbDb = req.result;
+            resolve(idbDb);
+        };
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function idbGetAudio(name) {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, "readonly");
+        const store = tx.objectStore(IDB_STORE);
+        const req = store.get(name);
+        req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+        req.onerror = () => reject(req.error);
+    }));
+}
+
+function idbPutAudio(name, blob) {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, "readwrite");
+        const store = tx.objectStore(IDB_STORE);
+        const req = store.put({ name, blob });
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+    }));
+}
+
+async function resolveAudioUrl(name) {
+    if (audioCache.has(name)) {
+        return audioCache.get(name);
+    }
+    const cachedBlob = await idbGetAudio(name);
+    if (cachedBlob) {
+        const blobUrl = URL.createObjectURL(cachedBlob);
+        audioCache.set(name, blobUrl);
+        return blobUrl;
+    }
+    const audioUrl = `/api/clips/${encodeURIComponent(name)}/play`;
+    const response = await fetch(audioUrl);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    audioCache.set(name, blobUrl);
+    idbPutAudio(name, blob).catch(() => {});
+    return blobUrl;
+}
 
 function parseClipName(clipName) {
     const match = clipName.match(/^(s\d{2})([mf])(\d{2})([mf])([1-6])$/);
@@ -174,7 +233,16 @@ function restorePreferences() {
     if (vol <= 0) volumeIcon.className = "fas fa-volume-mute";
     else if (vol <= Number(volumeSlider.max) / 2) volumeIcon.className = "fas fa-volume-down";
     else volumeIcon.className = "fas fa-volume-up";
-    player.volume = Math.min(Math.max(vol, 0), 1);
+    if (vol > 1) {
+        const ctx = ensureAudioGraph();
+        if (ctx) {
+            if (ctx.state === "suspended") ctx.resume();
+            player.volume = 1;
+            gainNode.gain.value = vol;
+        }
+    } else {
+        player.volume = Math.min(Math.max(vol, 0), 1);
+    }
     applyTheme(preferences.theme);
     updateCaption(null);
     updateMorphologyFilterVisibility();
@@ -296,6 +364,17 @@ function requestPlayback(shouldPlay) {
         player.currentTime = 0;
     }
     player.playbackRate = Number(speed.value);
+    const vol = Number(volumeSlider.value);
+    if (vol > 1) {
+        const ctx = ensureAudioGraph();
+        if (ctx) {
+            if (ctx.state === "suspended") ctx.resume();
+            player.volume = 1;
+            gainNode.gain.value = vol;
+        }
+    } else {
+        player.volume = Math.min(Math.max(vol, 0), 1);
+    }
     updateAudioControls();
 
     try {
@@ -415,9 +494,8 @@ async function selectClip(name) {
         estimatedDuration = cached.length;
         renderUtterances();
         setEstimatedDuration();
-        const audioUrl = `/api/clips/${encodeURIComponent(name)}/play`;
-        pendingAudioUrl = audioUrl;
-        downloadTrack.href = audioUrl;
+        pendingAudioUrl = `/api/clips/${encodeURIComponent(name)}/play`;
+        downloadTrack.href = pendingAudioUrl;
         downloadTrack.download = `${name}.opus`;
         downloadTrack.classList.remove("is-disabled");
         downloadTrack.setAttribute("aria-disabled", "false");
@@ -668,8 +746,10 @@ async function playUtterance(item) {
     };
 
     if (!player.src && pendingAudioUrl) {
-        player.src = pendingAudioUrl;
+        const blobUrl = await resolveAudioUrl(currentClip);
+        player.src = blobUrl;
         player.playbackRate = Number(speed.value);
+        player.volume = Math.min(Math.max(Number(volumeSlider.value), 0), 1);
         await new Promise(resolve => player.addEventListener("loadedmetadata", resolve, { once: true }));
     }
     if (player.readyState >= 1) {
@@ -1135,8 +1215,10 @@ function chooseNextTrack(random = false) {
 
 playPause.addEventListener("click", async () => {
     if (!player.src && pendingAudioUrl) {
-        player.src = pendingAudioUrl;
+        const blobUrl = await resolveAudioUrl(currentClip);
+        player.src = blobUrl;
         player.playbackRate = Number(speed.value);
+        player.volume = Math.min(Math.max(Number(volumeSlider.value), 0), 1);
         await new Promise(resolve => player.addEventListener("loadedmetadata", resolve, { once: true }));
     }
     if (!player.src) return;
@@ -1332,11 +1414,13 @@ async function init() {
         nextTrack.disabled = clips.length === 0;
         randomTrack.disabled = clips.length === 0;
         renderClips();
+        restorePreferences();
         if (typeof preferences.selectedClip === "string" && clips.includes(preferences.selectedClip)) {
             await selectClip(preferences.selectedClip);
-            return;
+        } else {
+            setStatus(`${clips.length} recordings ready · choose a voice to begin`);
         }
-        setStatus(`${clips.length} recordings ready · choose a voice to begin`);
+        restorePreferences();
     } catch (error) {
         nextTrack.disabled = true;
         randomTrack.disabled = true;
@@ -1346,5 +1430,4 @@ async function init() {
     }
 }
 
-restorePreferences();
 init();
