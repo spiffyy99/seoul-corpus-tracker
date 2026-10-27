@@ -21,7 +21,7 @@
 
 * { box-sizing: border-box; }
 
-html { min-width: 320px; scroll-behavior: smooth; }
+html { min-width: 320px; }
 
 body {
     min-height: 100dvh;
@@ -765,7 +765,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .volume-slider-wrap {
     position: absolute;
     bottom: 100%;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
     margin-bottom: 4px;
     display: flex;
     align-items: flex-end;
@@ -810,6 +811,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     cursor: pointer;
 }
 #volume-btn {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -825,7 +827,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 }
 #volume-btn:hover { border-color: var(--blue); background: var(--blue-soft); }
 #volume-btn svg { width: 20px; height: 20px; flex: 0 0 auto; }
-#volume-btn svg path { fill: currentColor; }
+#volume-btn svg path, #volume-btn i { fill: currentColor; color: currentColor; }
 
 .attribution {
     position: relative;

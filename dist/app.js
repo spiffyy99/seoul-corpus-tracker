@@ -171,7 +171,7 @@ function restorePreferences() {
     }
     const vol = Number(volumeSlider.value);
     if (vol <= 0) volumeIcon.className = "fas fa-volume-mute";
-    else if (vol < 0.5) volumeIcon.className = "fas fa-volume-down";
+    else if (vol <= 1.5) volumeIcon.className = "fas fa-volume-down";
     else volumeIcon.className = "fas fa-volume-up";
     applyTheme(preferences.theme);
     updateCaption(null);
@@ -1200,7 +1200,8 @@ function ensureAudioGraph() {
     return audioCtx;
 }
 
-volumeBtn.addEventListener("click", () => {
+volumeBtn.addEventListener("click", (event) => {
+    if (event.target.closest("#volume-slider-wrap")) return;
     const wrap = document.querySelector("#volume-slider-wrap");
     wrap.classList.toggle("hidden");
 });
@@ -1210,7 +1211,7 @@ volumeSlider.addEventListener("input", () => {
     ensureAudioGraph();
     gainNode.gain.value = vol;
     if (vol <= 0) volumeIcon.className = "fas fa-volume-mute";
-    else if (vol < 0.5) volumeIcon.className = "fas fa-volume-down";
+    else if (vol <= 0.5) volumeIcon.className = "fas fa-volume-down";
     else volumeIcon.className = "fas fa-volume-up";
     savePreference("volume", vol);
 });
