@@ -1189,6 +1189,23 @@ speed.addEventListener("input", () => {
     savePreference("speed", rate);
 });
 
+let audioCtx, gainNode;
+function ensureAudioGraph() {
+    if (audioCtx) return audioCtx;
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = 1;
+        const source = audioCtx.createMediaElementSource(player);
+        source.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+    } catch (e) {
+        console.error("Volume graph failed:", e);
+        return null;
+    }
+    return audioCtx;
+}
+
 volumeBtn.addEventListener("click", (event) => {
     if (event.target.closest("#volume-slider-wrap")) return;
     volumeSliderWrap.classList.toggle("hidden");
@@ -1197,7 +1214,16 @@ volumeBtn.addEventListener("click", (event) => {
 volumeSlider.addEventListener("input", () => {
     const vol = Number(volumeSlider.value);
     const halfMax = Number(volumeSlider.max) / 2;
-    player.volume = Math.min(Math.max(vol, 0), 1);
+    if (vol > 1) {
+        const ctx = ensureAudioGraph();
+        if (ctx) {
+            if (ctx.state === "suspended") ctx.resume();
+            player.volume = 1;
+            gainNode.gain.value = vol;
+        }
+    } else {
+        player.volume = vol;
+    }
     if (vol <= 0) volumeIcon.className = "fas fa-volume-mute";
     else if (vol <= halfMax) volumeIcon.className = "fas fa-volume-down";
     else volumeIcon.className = "fas fa-volume-up";
