@@ -8,6 +8,9 @@ const status = document.querySelector("#status");
 const clipTitle = document.querySelector("#clip-title");
 const speed = document.querySelector("#speed");
 const speedValue = document.querySelector("#speed-value");
+const volumeBtn = document.querySelector("#volume-btn");
+const volumeSlider = document.querySelector("#volume-slider");
+const volumeIcon = document.querySelector("#volume-icon");
 const captionsEnabled = document.querySelector("#captions-enabled");
 const morphologyEnabled = document.querySelector("#morphology-enabled");
 const caption = document.querySelector("#caption");
@@ -162,6 +165,14 @@ function restorePreferences() {
     const rate = Number(speed.value);
     speedValue.textContent = `${rate.toFixed(2)}×`;
     player.playbackRate = rate;
+    const savedVol = Number(preferences.volume);
+    if (Number.isFinite(savedVol) && savedVol >= 0 && savedVol <= 2) {
+        volumeSlider.value = String(savedVol);
+    }
+    const vol = Number(volumeSlider.value);
+    if (vol <= 0) volumeIcon.className = "fas fa-volume-mute";
+    else if (vol < 0.5) volumeIcon.className = "fas fa-volume-down";
+    else volumeIcon.className = "fas fa-volume-up";
     applyTheme(preferences.theme);
     updateCaption(null);
     updateMorphologyFilterVisibility();
@@ -282,6 +293,7 @@ function requestPlayback(shouldPlay) {
     if (estimatedDuration > 0 && player.currentTime >= estimatedDuration) {
         player.currentTime = 0;
     }
+    player.playbackRate = Number(speed.value);
     updateAudioControls();
 
     try {
@@ -608,10 +620,25 @@ async function playUtterance(item) {
     });
     const button = utteranceButtons.get(item);
     if (button) {
+        const pageY = window.scrollY;
+        let attempts = 0;
+        const maxAttempts = 6;
+        function retryCaptionScroll() {
+            attempts += 1;
+            if (attempts > maxAttempts) return;
+            const remainingDelta = pageY - window.scrollY;
+            if (Math.abs(remainingDelta) > 1) {
+                window.scrollBy(0, remainingDelta);
+                requestAnimationFrame(retryCaptionScroll);
+            }
+        }
+        button.blur();
+        updateCaption(item);
+        window.scrollBy(0, pageY - window.scrollY);
         button.focus({ preventScroll: true });
         scrollActiveUtteranceIntoView(button);
+        requestAnimationFrame(retryCaptionScroll);
     }
-    updateCaption(item);
 
     const seekAndPlay = async () => {
         if (pendingUtteranceStart === seekAndPlay) {
@@ -640,6 +667,7 @@ async function playUtterance(item) {
 
     if (!player.src && pendingAudioUrl) {
         player.src = pendingAudioUrl;
+        player.playbackRate = Number(speed.value);
         await new Promise(resolve => player.addEventListener("loadedmetadata", resolve, { once: true }));
     }
     if (player.readyState >= 1) {
@@ -936,6 +964,8 @@ function morphemeColor(tag) {
 }
 
 function renderCaptionText(item) {
+    const prevScrollY = window.scrollY;
+    const prevCaptionHeight = caption.offsetHeight;
     caption.replaceChildren();
     if (!item) return;
     const content = document.createElement("span");
@@ -944,6 +974,8 @@ function renderCaptionText(item) {
     const text = item.text;
     if (!morphologyEnabled.checked) {
         content.textContent = text;
+        const delta = caption.offsetHeight - prevCaptionHeight;
+        if (delta) window.scrollTo(0, prevScrollY - delta);
         return;
     }
 
@@ -985,6 +1017,8 @@ function renderCaptionText(item) {
         const popup = popupAnchor.querySelector(".caption-morpheme-popup");
         if (popup) positionCaptionMorphemePopup(popupAnchor, popup);
     }
+    const delta = caption.offsetHeight - prevCaptionHeight;
+    if (delta) window.scrollTo(0, prevScrollY - delta);
 }
 
 function escapeHtml(value) {
@@ -1013,17 +1047,31 @@ function captureViewportPosition() {
     const pageY = window.scrollY;
     const listX = utteranceList.scrollLeft;
     const listY = utteranceList.scrollTop;
+    let attempts = 0;
+    const maxAttempts = 6;
+
+    function retryRestore() {
+        attempts += 1;
+        if (attempts > maxAttempts) return;
+        const remainingDelta = pageY - window.scrollY;
+        if (Math.abs(remainingDelta) > 1) {
+            window.scrollBy(0, remainingDelta);
+            requestAnimationFrame(retryRestore);
+        }
+    }
 
     return () => requestAnimationFrame(() => {
         const root = document.documentElement;
         const previousScrollBehavior = root.style.scrollBehavior;
         root.style.scrollBehavior = "auto";
         const maxPageY = Math.max(0, root.scrollHeight - root.clientHeight);
-        if (pageY > maxPageY) pageY = maxPageY;
-        window.scrollTo(pageX, pageY);
+        let targetY = pageY;
+        if (targetY > maxPageY) targetY = maxPageY;
+        window.scrollTo(0, targetY);
         root.style.scrollBehavior = previousScrollBehavior;
         utteranceList.scrollLeft = listX;
         utteranceList.scrollTop = listY;
+        requestAnimationFrame(retryRestore);
     });
 }
 
@@ -1081,6 +1129,7 @@ function chooseNextTrack(random = false) {
 playPause.addEventListener("click", async () => {
     if (!player.src && pendingAudioUrl) {
         player.src = pendingAudioUrl;
+        player.playbackRate = Number(speed.value);
         await new Promise(resolve => player.addEventListener("loadedmetadata", resolve, { once: true }));
     }
     if (!player.src) return;
@@ -1133,6 +1182,39 @@ speed.addEventListener("input", () => {
     savePreference("speed", rate);
 });
 
+let audioCtx, gainNode;
+function ensureAudioGraph() {
+    if (audioCtx) return audioCtx;
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = Number(volumeSlider.value);
+        const source = audioCtx.createMediaElementSource(player);
+        source.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+    } catch (e) {
+        console.error("Volume graph failed:", e);
+        return null;
+    }
+    return audioCtx;
+}
+
+volumeBtn.addEventListener("click", () => {
+    const wrap = document.querySelector("#volume-slider-wrap");
+    wrap.classList.toggle("hidden");
+});
+
+volumeSlider.addEventListener("input", () => {
+    const vol = Number(volumeSlider.value);
+    ensureAudioGraph();
+    gainNode.gain.value = vol;
+    if (vol <= 0) volumeIcon.className = "fas fa-volume-mute";
+    else if (vol < 0.5) volumeIcon.className = "fas fa-volume-down";
+    else volumeIcon.className = "fas fa-volume-up";
+    savePreference("volume", vol);
+});
+
 captionsEnabled.addEventListener("change", () => {
     savePreference("captionsEnabled", captionsEnabled.checked);
     revealCandidate = null;
@@ -1142,8 +1224,10 @@ captionsEnabled.addEventListener("change", () => {
 });
 morphologyEnabled.addEventListener("change", () => {
     savePreference("morphologyEnabled", morphologyEnabled.checked);
+    const restoreViewportPosition = captureViewportPosition("morphologyEnabled");
     updateCaption(activeUtterance);
     updateMorphologyFilterVisibility();
+    restoreViewportPosition();
 });
 hideShort.addEventListener("change", () => {
     savePreference("hideShort", hideShort.checked);

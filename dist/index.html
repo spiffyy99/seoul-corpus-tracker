@@ -7,6 +7,7 @@
     <meta name="description" content="Listen closely to spontaneous Seoul Korean speech and explore its aligned transcripts.">
     <title>K-Corpus Listener</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='14' fill='%23e9634f'/%3E%3Cpath d='M8 24h5l4-9 6 18 5-12 4 6h8' fill='none' stroke='%23fffaf1' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
 </head>
@@ -89,6 +90,12 @@
                         </button>
                         <input id="progress" type="range" min="0" max="0" step="0.01" value="0" aria-label="Audio position" disabled>
                         <span id="audio-time">0:00 / 0:00</span>
+                        <button id="volume-btn" type="button" aria-label="Volume">
+                            <i id="volume-icon" class="fas fa-volume-up" aria-hidden="true"></i>
+                        </button>
+                        <div id="volume-slider-wrap" class="volume-slider-wrap hidden">
+                            <input id="volume-slider" type="range" min="0" max="2" step="0.05" value="1" aria-label="Volume">
+                        </div>
                     </div>
                 </section>
 
