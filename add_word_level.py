@@ -11,7 +11,7 @@ HANGUL_RE = re.compile(r"[\uac00-\ud7a3]")
 
 
 def contains_hangul(text):
-    return bool(HANGUL_RE.search(text or ""))
+    return text is not None and bool(HANGUL_RE.search(str(text)))
 
 
 def fmt_num(n):
@@ -26,16 +26,17 @@ def format_morpheme(m):
 
 
 def format_utterance(u, is_first, is_last):
-    start, end, text, morphology, word_spans = u
+    text, morphology, word_spans = u
     has_words = bool(word_spans)
+    text_str = text if text else ""
     lines = []
 
     if is_first:
-        # First utterance: combined with "utterances": prefix -> "[ start..."
-        lines.append(f"[ {fmt_num(start)}, {fmt_num(end)}, \"{text}\", ")
+        # First utterance: combined with "utterances": [ prefix -> "[[ text,..."
+        lines.append(f"[[ \"{text_str}\", ")
     else:
-        # Subsequent utterances: "[ start..." indented 8 spaces
-        lines.append(f"        [ {fmt_num(start)}, {fmt_num(end)}, \"{text}\", ")
+        # Subsequent utterances: "[ text..." indented 8 spaces
+        lines.append(f"        [ \"{text_str}\", ")
 
     # Morphology array opening
     lines.append("            [ ")
@@ -48,7 +49,7 @@ def format_utterance(u, is_first, is_last):
     morph_closer = "            ]," if has_words else "            ]"
     lines.append(morph_closer)
 
-    # Word spans
+    # Word spans: [[s1, e1], [s2, e2], ...]
     if has_words:
         spans_str = ", ".join(f"[{fmt_num(s)}, {fmt_num(e)}]" for s, e in word_spans)
         lines.append(f"            [{spans_str}]")
@@ -103,11 +104,6 @@ def main():
             skipped += 1
             continue
 
-        # Already has word-level data?
-        if any(len(u) > 4 for u in utterances):
-            skipped += 1
-            continue
-
         # Word-tier entries containing Hangul, sorted by start time
         word_entries = sorted(
             [w for w in word_tier.entries if contains_hangul(w.label)],
@@ -119,6 +115,7 @@ def main():
             start, end, text = u[0], u[1], u[2]
             morphology = u[3] if len(u) > 3 else []
 
+            # Only add word spans for utterances containing Hangul
             if contains_hangul(text):
                 word_spans = []
                 for w in word_entries:
@@ -127,21 +124,21 @@ def main():
             else:
                 word_spans = []
 
-            new_utterances.append([start, end, text, morphology, word_spans])
+            new_utterances.append([text, morphology, word_spans])
 
         data["utterances"] = new_utterances
 
         # Build output matching original format (4-space base indent)
         out_lines = ["{"]
         out_lines.append(f'    "length": {fmt_num(data["length"])},')
-        out_lines.append('    "utterances": [')
+        out_lines.append('    "utterances": ')
 
         for i, u in enumerate(new_utterances):
             is_first = i == 0
             is_last = i == len(new_utterances) - 1
             utt_lines = format_utterance(u, is_first, is_last)
             if i == 0:
-                # Merge first utterance line with "utterances": prefix
+                # Merge first utterance line with "utterances": [ prefix
                 out_lines[-1] = out_lines[-1] + utt_lines[0]
                 out_lines.extend(utt_lines[1:])
             else:
