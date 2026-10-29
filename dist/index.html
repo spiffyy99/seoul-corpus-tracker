@@ -61,6 +61,10 @@
                         <p class="clip-context">Now playing</p>
                         <div class="track-title-line">
                             <h2 id="clip-title" class="clip-title">Choose a recording</h2>
+                            <button id="word-mode" class="mode-toggle" type="button" role="switch" aria-checked="false" aria-label="Utterance">
+                                <span class="mode-toggle-thumb"></span>
+                                <span class="mode-toggle-label">Utterance</span>
+                            </button>
                             <div id="speaker-info" aria-label="Speaker and segment details" hidden></div>
                         </div>
                     </div>
@@ -74,8 +78,8 @@
                             Random
                         </button>
                         <button id="next-track" class="track-button primary" type="button" aria-label="Go to next recording" disabled>
-                            Next track
                             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4m4-9v10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Next track
                         </button>
                     </div>
                 </div>
@@ -90,6 +94,21 @@
                         </button>
                         <input id="progress" type="range" min="0" max="0" step="0.01" value="0" aria-label="Audio position" disabled>
                         <span id="audio-time">0:00 / 0:00</span>
+                        <div id="window-controls" class="window-controls" hidden>
+                            <div class="context-header">
+                                <label class="window-label">Context</label>
+                                <button id="context-help" type="button" class="help-bubble" aria-label="About context sliders">?</button>
+                                <div id="context-help-popup" class="help-popup hidden" role="tooltip">
+                                    Individual words may not be audible. Extend the sliders to play surrounding audio for context.
+                                </div>
+                            </div>
+                            <div class="window-slider-group">
+                                <input id="window-left" type="range" min="0" max="5" step="0.1" value="0" aria-label="Left context seconds" dir="rtl">
+                                <label class="window-slider-label">← Left</label>
+                                <label class="window-slider-label">Right →</label>
+                                <input id="window-right" type="range" min="0" max="5" step="0.1" value="0" aria-label="Right context seconds">
+                            </div>
+                        </div>
                         <button id="volume-btn" type="button" aria-label="Volume">
                             <i id="volume-icon" class="fas fa-volume-up" aria-hidden="true"></i>
                             <div id="volume-slider-wrap" class="volume-slider-wrap hidden">
@@ -109,24 +128,15 @@
                     <label class="setting"><input id="captions-enabled" type="checkbox"> Show captions</label>
                     <label class="setting"><input id="morphology-enabled" type="checkbox"> Show morphology</label>
                     <label class="setting"><input id="hide-short" type="checkbox" checked> Hide utterances with 3 characters or fewer</label>
-                    <label class="setting"><input id="word-mode" type="checkbox"> Word mode</label>
                 </div>
-                <div id="caption" class="disabled" aria-live="polite">Captions are off</div>
-                <div id="word-nav" class="word-nav" hidden>
-                    <button id="prev-word" type="button" aria-label="Previous word">← Prev word</button>
-                    <button id="random-word" type="button" aria-label="Random word in clip">Random word</button>
-                    <button id="next-word" type="button" aria-label="Next word">Next word →</button>
-                </div>
-                <div id="window-controls" class="window-controls" hidden>
-                    <label class="window-label">Context window</label>
-                    <div class="window-slider-group">
-                        <label class="window-slider-label">← Left</label>
-                        <input id="window-left" type="range" min="0" max="3" step="0.1" value="0" aria-label="Left context seconds">
-                        <input id="window-right" type="range" min="0" max="3" step="0.1" value="0" aria-label="Right context seconds">
-                        <label class="window-slider-label">Right →</label>
+                <div class="caption-bar">
+                    <div id="caption" class="disabled" aria-live="polite">Captions are off</div>
+                    <div id="word-nav" class="word-nav" hidden>
+                        <button id="prev-word" type="button" aria-label="Previous word">←</button>
+                        <button id="random-word" type="button" aria-label="Random word in clip">Random</button>
+                        <button id="next-word" type="button" aria-label="Next word">→</button>
                     </div>
                 </div>
-                <div id="morphology-panel" class="morphology-panel" aria-live="polite" hidden></div>
 
                 <section aria-labelledby="transcript-label">
                     <div class="transcript-tools">
@@ -153,7 +163,7 @@
               Uses the <em>Korean Corpus of Spontaneous Speech (Seoul Corpus)</em>,
               available from <a href="https://www.openslr.org/113/" target="_blank" rel="noopener">OpenSLR (SLR113)</a>,
               licensed under
-              <a href="https://creativecommons.org/licenses/by-nc/2.0/" target="_blank" rel="noopener">CC BY-NC 2.0</a> for non-commercial use.
+              <a href="https://www.creativecommons.org/licenses/by-nc/2.0/" target="_blank" rel="noopener">CC BY-NC 2.0</a> for non-commercial use.
               Supported by the National Research Foundation of Korea
               (NRF-2012S1A5A2A03034027).
 
