@@ -1753,20 +1753,31 @@ let popupTimer;
 const showPopup = () => {
     clearTimeout(popupTimer);
     const rect = contextHelp.getBoundingClientRect();
-    contextHelpPopup.style.left = `${rect.left}px`;
-    contextHelpPopup.style.top = `${rect.bottom + 6}px`;
+    contextHelpPopup.style.left = `${rect.right + 6}px`;
+    contextHelpPopup.style.top = `${rect.top}px`;
     contextHelpPopup.classList.remove("hidden");
 };
 const hidePopup = () => {
-    popupTimer = setTimeout(() => contextHelpPopup.classList.add("hidden"), 150);
+    popupTimer = setTimeout(() => {
+        contextHelpPopup.classList.add("hidden");
+        contextHelp.style.opacity = "";
+    }, 150);
 };
 contextHelp.addEventListener("click", (e) => {
     e.stopPropagation();
-    showPopup();
+    if (contextHelpPopup.classList.contains("hidden")) {
+        showPopup();
+    } else {
+        contextHelpPopup.classList.add("hidden");
+    }
 });
 contextHelp.addEventListener("touchstart", (e) => {
     e.preventDefault();
-    showPopup();
+    if (contextHelpPopup.classList.contains("hidden")) {
+        showPopup();
+    } else {
+        contextHelpPopup.classList.add("hidden");
+    }
 }, { passive: false });
 contextHelp.addEventListener("mouseenter", showPopup);
 contextHelp.addEventListener("mouseleave", hidePopup);
@@ -1777,6 +1788,7 @@ contextHelpPopup.addEventListener("mouseleave", hidePopup);
 document.addEventListener("click", (e) => {
     if (!contextHelp.contains(e.target) && !contextHelpPopup.contains(e.target)) {
         contextHelpPopup.classList.add("hidden");
+        contextHelp.style.opacity = "";
     }
 });
 clipSearch.addEventListener("input", renderClips);

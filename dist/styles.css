@@ -1169,6 +1169,10 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     .track-actions { justify-content: flex-start; margin-top: 14px; }
 }
 
+@media (min-width: 651px) {
+    #window-left { direction: rtl; }
+}
+
 @media (max-width: 650px) {
     .page-shell { padding: 14px 13px 18px; }
     .masthead { padding-bottom: 16px; }
@@ -1212,6 +1216,10 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     .window-slider-group { flex-direction: column; align-items: stretch; gap: 4px; width: 100%; }
     .window-slider-group input[type="range"] { width: 100%; }
     .window-label { order: -1; }
+    #window-left { direction: ltr; order: 2; }
+    .window-slider-label:nth-of-type(1) { order: 1; }
+    .window-slider-label:nth-of-type(2) { order: 3; }
+    #window-right { order: 4; }
 }
 
 @media (max-width: 380px) {
