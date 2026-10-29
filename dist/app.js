@@ -16,6 +16,7 @@ const captionsEnabled = document.querySelector("#captions-enabled");
 const morphologyEnabled = document.querySelector("#morphology-enabled");
 const caption = document.querySelector("#caption");
 const hideShort = document.querySelector("#hide-short");
+const hideShortLabel = document.querySelector(".hide-short-label");
 const playPause = document.querySelector("#play-pause");
 const progress = document.querySelector("#progress");
 const audioTime = document.querySelector("#audio-time");
@@ -351,6 +352,8 @@ function resetAudioControls() {
     playPause.disabled = true;
     playPause.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5 12 8l-7 4.5z" fill="currentColor"/></svg><span>Play</span>';
     audioTime.textContent = "0:00 / 0:00";
+    windowLeft.value = "0";
+    windowRight.value = "0";
 }
 
 function setEstimatedDuration() {
@@ -1301,7 +1304,7 @@ function renderWords() {
     wordButtons.clear();
 
     if (!filtered.length) {
-        utteranceList.append(createEmptyState("No words match", "Adjust the text search or short-line filter."));
+        utteranceList.append(createEmptyState("No words match", "Adjust the text search or filters."));
         utteranceCount.textContent = `${filtered.length} shown / ${words.length} total words`;
         return;
     }
@@ -1336,10 +1339,19 @@ function renderWords() {
 
 function getVisibleWords() {
     const query = utteranceSearch.value.trim().toLowerCase();
-    return words.filter(item => {
+    const filtered = words.filter(item => {
         const matchesSearch = item.text.toLowerCase().includes(query);
-        return matchesSearch;
+        return matchesSearch && matchesMorphologyFilter(item);
     });
+    if (hideShort.checked) {
+        const seen = new Set();
+        return filtered.filter(item => {
+            if (seen.has(item.text)) return false;
+            seen.add(item.text);
+            return true;
+        });
+    }
+    return filtered;
 }
 
 function switchToWordMode() {
@@ -1354,8 +1366,7 @@ function switchToWordMode() {
     document.querySelector("#audio-time").hidden = true;
     playPausesHidden = true;
     playPause.style.display = "none";
-    hideShort.disabled = true;
-    hideShort.parentElement.style.opacity = "0.5";
+    hideShortLabel.textContent = "Hide duplicate words";
 
     // Build word list once (cached)
     if (!wordsBuilt) {
@@ -1380,19 +1391,24 @@ function switchToWordMode() {
         caption.classList.remove("word-mode");
     }
 
-    // If we have an active utterance, find the corresponding word
+    // If we have an active utterance, find the corresponding word (not hidden by filters)
     if (prevUtterance && !activeWord) {
-        const utteranceWords = words.filter(w => w.utteranceStart === prevUtterance.start && w.utteranceEnd === prevUtterance.end);
+        const visible = getVisibleWords();
+        const utteranceWords = visible.filter(w => w.utteranceStart === prevUtterance.start && w.utteranceEnd === prevUtterance.end);
         if (utteranceWords.length > 0) {
             activeWord = utteranceWords[0];
-            activeWordIndex = words.indexOf(activeWord);
+            activeWordIndex = visible.indexOf(activeWord);
         }
     }
 
     if (activeWord) {
         const button = wordButtons.get(activeWord);
-        if (button) button.classList.add("active");
+        if (button) {
+            button.classList.add("active");
+            button.scrollIntoView({ block: "center", inline: "nearest" });
+        }
         updateCaption(activeWord);
+        requestPlayback(false);
     }
 }
 
@@ -1410,6 +1426,7 @@ function switchToUtteranceMode() {
     playPause.style.display = "";
     hideShort.disabled = false;
     hideShort.parentElement.style.opacity = "1";
+    hideShortLabel.textContent = "Hide utterances with 3 characters or fewer";
 
     renderUtterances();
 
@@ -1424,32 +1441,38 @@ function switchToUtteranceMode() {
         if (utterance) {
             activeUtterance = utterance;
             const button = utteranceButtons.get(activeUtterance);
-            if (button) button.classList.add("active");
+            if (button) {
+                button.classList.add("active");
+                button.scrollIntoView({ block: "center", inline: "nearest" });
+            }
             updateCaption(activeUtterance);
         }
     }
 }
 
 function prevWord() {
-    if (words.length === 0) return;
-    const current = activeWordIndex != null ? activeWordIndex : 0;
+    const visible = getVisibleWords();
+    if (visible.length === 0) return;
+    const current = activeWord != null ? visible.indexOf(activeWord) : 0;
     const next = Math.max(0, current - 1);
-    const word = words[next];
+    const word = visible[next];
     if (word) playWord(word);
 }
 
 function nextWord() {
-    if (words.length === 0) return;
-    const current = activeWordIndex != null ? activeWordIndex : words.length - 1;
-    const next = Math.min(words.length - 1, current + 1);
-    const word = words[next];
+    const visible = getVisibleWords();
+    if (visible.length === 0) return;
+    const current = activeWord != null ? visible.indexOf(activeWord) : -1;
+    const next = Math.min(visible.length - 1, current + 1);
+    const word = visible[next];
     if (word) playWord(word);
 }
 
 function randomWord() {
-    if (words.length === 0) return;
-    const index = Math.floor(Math.random() * words.length);
-    const word = words[index];
+    const visible = getVisibleWords();
+    if (visible.length === 0) return;
+    const index = Math.floor(Math.random() * visible.length);
+    const word = visible[index];
     if (word) playWord(word);
 }
 
@@ -1462,6 +1485,8 @@ async function playWord(word) {
     activeWord = word;
     activeWordIndex = words.indexOf(word);
     highlightedMorpheme = null;
+    windowLeft.value = "0";
+    windowRight.value = "0";
 
     const previousRevealCandidate = revealCandidate;
     if (captionsEnabled.checked) {
@@ -1743,8 +1768,12 @@ wordMode.addEventListener("click", () => {
 prevWordBtn.addEventListener("click", prevWord);
 nextWordBtn.addEventListener("click", nextWord);
 randomWordBtn.addEventListener("click", randomWord);
-windowLeft.addEventListener("input", () => savePreference("windowLeft", windowLeft.value));
-windowRight.addEventListener("input", () => savePreference("windowRight", windowRight.value));
+windowLeft.addEventListener("input", () => {
+    if (activeWord) savePreference("windowLeft", windowLeft.value);
+});
+windowRight.addEventListener("input", () => {
+    if (activeWord) savePreference("windowRight", windowRight.value);
+});
 
 // Context help popup
 const contextHelp = document.getElementById("context-help");
@@ -1886,9 +1915,10 @@ async function init() {
         if (typeof preferences.selectedClip === "string" && clips.includes(preferences.selectedClip)) {
             await selectClip(preferences.selectedClip);
         } else {
+            windowLeft.value = "0";
+            windowRight.value = "0";
             setStatus(`${clips.length} recordings ready · choose a voice to begin`);
         }
-        restorePreferences();
     } catch (error) {
         nextTrack.disabled = true;
         randomTrack.disabled = true;

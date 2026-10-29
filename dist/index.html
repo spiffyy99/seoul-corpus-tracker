@@ -7,6 +7,15 @@
     <meta name="description" content="Listen closely to spontaneous Seoul Korean speech and explore its aligned transcripts.">
     <title>K-Corpus Listener</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='14' fill='%23e9634f'/%3E%3Cpath d='M8 24h5l4-9 6 18 5-12 4 6h8' fill='none' stroke='%23fffaf1' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <script>
+        try {
+            const saved = localStorage.getItem("seoul-corpus-tracker.preferences.v1");
+            if (saved) {
+                const prefs = JSON.parse(saved);
+                if (prefs.theme === "dark") document.documentElement.dataset.theme = "dark";
+            }
+        } catch {}
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
@@ -62,6 +71,7 @@
                         <div class="track-title-line">
                             <h2 id="clip-title" class="clip-title">Choose a recording</h2>
                             <button id="word-mode" class="mode-toggle" type="button" role="switch" aria-checked="false" aria-label="Utterance">
+                                <span class="mode-toggle-track"></span>
                                 <span class="mode-toggle-thumb"></span>
                                 <span class="mode-toggle-label">Utterance</span>
                             </button>
@@ -127,7 +137,7 @@
                 <div class="settings">
                     <label class="setting"><input id="captions-enabled" type="checkbox"> Show captions</label>
                     <label class="setting"><input id="morphology-enabled" type="checkbox"> Show morphology</label>
-                    <label class="setting"><input id="hide-short" type="checkbox" checked> Hide utterances with 3 characters or fewer</label>
+                    <label class="setting"><input id="hide-short" type="checkbox" checked><span class="hide-short-label">Hide utterances with 3 characters or fewer</span></label>
                 </div>
                 <div class="caption-bar">
                     <div id="caption" class="disabled" aria-live="polite">Captions are off</div>
