@@ -109,8 +109,23 @@
                     <label class="setting"><input id="captions-enabled" type="checkbox"> Show captions</label>
                     <label class="setting"><input id="morphology-enabled" type="checkbox"> Show morphology</label>
                     <label class="setting"><input id="hide-short" type="checkbox" checked> Hide utterances with 3 characters or fewer</label>
+                    <label class="setting"><input id="word-mode" type="checkbox"> Word mode</label>
                 </div>
                 <div id="caption" class="disabled" aria-live="polite">Captions are off</div>
+                <div id="word-nav" class="word-nav" hidden>
+                    <button id="prev-word" type="button" aria-label="Previous word">← Prev word</button>
+                    <button id="random-word" type="button" aria-label="Random word in clip">Random word</button>
+                    <button id="next-word" type="button" aria-label="Next word">Next word →</button>
+                </div>
+                <div id="window-controls" class="window-controls" hidden>
+                    <label class="window-label">Context window</label>
+                    <div class="window-slider-group">
+                        <label class="window-slider-label">← Left</label>
+                        <input id="window-left" type="range" min="0" max="3" step="0.1" value="0" aria-label="Left context seconds">
+                        <input id="window-right" type="range" min="0" max="3" step="0.1" value="0" aria-label="Right context seconds">
+                        <label class="window-slider-label">Right →</label>
+                    </div>
+                </div>
                 <div id="morphology-panel" class="morphology-panel" aria-live="polite" hidden></div>
 
                 <section aria-labelledby="transcript-label">

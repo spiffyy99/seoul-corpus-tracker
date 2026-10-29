@@ -31,6 +31,14 @@ const themeToggleLabel = document.querySelector("#theme-toggle-label");
 const morphologyFilterWrap = document.querySelector("#morphology-filter-wrap");
 const morphologyFilterButton = document.querySelector("#morphology-filter");
 const morphologyFilterList = document.querySelector("#morphology-filter-list");
+const wordMode = document.querySelector("#word-mode");
+const wordNav = document.querySelector("#word-nav");
+const prevWordBtn = document.querySelector("#prev-word");
+const nextWordBtn = document.querySelector("#next-word");
+const randomWordBtn = document.querySelector("#random-word");
+const windowControls = document.querySelector("#window-controls");
+const windowLeft = document.querySelector("#window-left");
+const windowRight = document.querySelector("#window-right");
 
 const PREFERENCES_KEY = "seoul-corpus-tracker.preferences.v1";
 let preferences = readPreferences();
@@ -42,6 +50,7 @@ let activeUtteranceEnd = null;
 let activeUtterance = null;
 let revealCandidate = null;
 let revealedUtterance = null;
+let revealedWord = null;
 let selectionId = 0;
 let estimatedDuration = 0;
 let seeking = false;
@@ -54,6 +63,13 @@ let pendingUtteranceSeek = null;
 let pendingAudioUrl = null;
 let posTags = {};
 let highlightedMorpheme = null;
+
+// Word mode state
+let wordModeEnabled = false;
+let words = [];
+let wordButtons = new Map();
+let activeWordIndex = null;
+let activeWord = null;
 
 // Utterance morpheme-type filter state. Empty set means no filter (show all).
 const selectedMorphTypes = new Set();
@@ -151,11 +167,21 @@ function parseClipName(clipName) {
 
 function parseEntry(entry) {
     if (Array.isArray(entry)) {
+        const text = String(entry[0] ?? "").trim();
+        const morphology = Array.isArray(entry[1]) ? entry[1] : [];
+        const wordSpans = Array.isArray(entry[2]) ? entry[2] : [];
+        // Derive start/end from word spans
+        let start = null, end = null;
+        if (wordSpans.length > 0) {
+            start = Number(wordSpans[0][0]);
+            end = Number(wordSpans[wordSpans.length - 1][1]);
+        }
         return {
-            start: Number(entry[0]),
-            end: Number(entry[1]),
-            text: String(entry[2] ?? "").trim(),
-            morphology: Array.isArray(entry[3]) ? entry[3] : [],
+            start,
+            end,
+            text,
+            morphology,
+            wordSpans,
         };
     }
     return {
@@ -163,6 +189,7 @@ function parseEntry(entry) {
         end: Number(entry.end),
         text: String(entry.text ?? "").trim(),
         morphology: Array.isArray(entry.morphology) ? entry.morphology : [],
+        wordSpans: Array.isArray(entry.wordSpans) ? entry.wordSpans : [],
     };
 }
 
@@ -246,6 +273,15 @@ function restorePreferences() {
     applyTheme(preferences.theme);
     updateCaption(null);
     updateMorphologyFilterVisibility();
+
+    const savedWindowLeft = Number(preferences.windowLeft);
+    if (Number.isFinite(savedWindowLeft) && savedWindowLeft >= 0 && savedWindowLeft <= Number(windowLeft.max)) {
+        windowLeft.value = String(savedWindowLeft);
+    }
+    const savedWindowRight = Number(preferences.windowRight);
+    if (Number.isFinite(savedWindowRight) && savedWindowRight >= 0 && savedWindowRight <= Number(windowRight.max)) {
+        windowRight.value = String(savedWindowRight);
+    }
 }
 
 function createEmptyState(title, message) {
@@ -452,10 +488,16 @@ async function selectClip(name) {
     activeUtteranceEnd = null;
     revealCandidate = null;
     revealedUtterance = null;
+    revealedWord = null;
     highlightedMorpheme = null;
+    wordModeEnabled = false;
     morphologyPanel.replaceChildren();
     morphologyPanel.hidden = true;
     utteranceButtons.clear();
+    wordButtons.clear();
+    words = [];
+    activeWord = null;
+    activeWordIndex = null;
     utteranceList.scrollTop = 0;
     utteranceList.scrollLeft = 0;
 
@@ -502,6 +544,10 @@ async function selectClip(name) {
         player.playbackRate = Number(speed.value);
         playPause.disabled = estimatedDuration <= 0;
         setStatus(`${utterances.length} utterances loaded · select a line to listen closely`);
+        if (preferences.wordMode === true) {
+            wordMode.checked = true;
+            switchToWordMode();
+        }
     } catch (error) {
         if (thisSelection !== selectionId) return;
         utteranceList.replaceChildren(createEmptyState("Transcript unavailable", "Try choosing this recording again in a moment."));
@@ -632,6 +678,10 @@ function syncUtteranceReveal(item) {
 }
 
 function renderUtterances() {
+    if (wordModeEnabled) {
+        renderWords();
+        return;
+    }
     const filtered = getVisibleUtterances();
     utteranceList.classList.toggle("captions-hidden", !captionsEnabled.checked);
     utteranceList.replaceChildren();
@@ -1115,6 +1165,10 @@ function escapeHtml(value) {
 }
 
 function updateCaption(item) {
+    if (wordModeEnabled) {
+        updateCaptionForWord(item);
+        return;
+    }
     const showRevealedCaption = item !== null && revealedUtterance === item;
     const captionsVisible = captionsEnabled.checked || showRevealedCaption;
     if (!captionsVisible) {
@@ -1179,6 +1233,379 @@ function scrollActiveUtteranceIntoView(button) {
     }
 }
 
+function isNoiseText(text) {
+    if (!text) return true;
+    const trimmed = text.trim();
+    if (!trimmed) return true;
+    if (trimmed.startsWith("<") && trimmed.endsWith(">")) return true;
+    return false;
+}
+
+function extractWordsFromUtterance(utterance) {
+    const text = utterance.text;
+    if (!text || isNoiseText(text)) return null;
+
+    const wordStrings = text.split(" ").filter(w => w.length > 0);
+    const spans = utterance.wordSpans || [];
+    const morphology = utterance.morphology || [];
+
+    const words = [];
+    let charPos = 0;
+    for (let i = 0; i < wordStrings.length; i++) {
+        const word = wordStrings[i];
+        const wordStart = charPos;
+        const wordEnd = charPos + word.length;
+
+        // Find span for this word
+        let span = null;
+        if (spans.length > i) {
+            span = spans[i];
+        }
+
+        // Find morphology entries that overlap this word's character range
+        const wordMorphology = morphology.filter(m => {
+            const mStart = Number(m[2]);
+            const mEnd = mStart + Number(m[3]);
+            return mStart < wordEnd && mEnd > wordStart;
+        });
+
+        words.push({
+            text: word,
+            start: span ? Number(span[0]) : null,
+            end: span ? Number(span[1]) : null,
+            morphology: wordMorphology,
+            utteranceStart: utterance.start,
+            utteranceEnd: utterance.end,
+        });
+
+        charPos = wordEnd + 1; // +1 for the space
+    }
+
+    return words;
+}
+
+function buildWordList() {
+    const allWords = [];
+    for (const utterance of utterances) {
+        const extracted = extractWordsFromUtterance(utterance);
+        if (extracted) {
+            allWords.push(...extracted);
+        }
+    }
+    return allWords.filter(w => w.start != null && w.end != null);
+}
+
+function renderWords() {
+    const filtered = getVisibleWords();
+    utteranceList.classList.toggle("captions-hidden", !captionsEnabled.checked);
+    utteranceList.replaceChildren();
+    wordButtons.clear();
+
+    if (!filtered.length) {
+        utteranceList.append(createEmptyState("No words match", "Adjust the text search or short-line filter."));
+        utteranceCount.textContent = `${filtered.length} shown / ${words.length} total words`;
+        return;
+    }
+
+    utteranceCount.textContent = `${filtered.length} shown / ${words.length} total words`;
+
+    filtered.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "word-row";
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "word";
+        const textHidden = !captionsEnabled.checked && revealedWord !== item;
+        button.setAttribute("aria-label", `Play word: ${item.text}`);
+        const text = document.createElement("span");
+        text.className = "word-text";
+        text.lang = "ko";
+        text.textContent = textHidden ? "" : item.text;
+        button.append(text);
+        wordButtons.set(item, button);
+        if (activeWord === item) button.classList.add("active");
+        button.addEventListener("click", () => playWord(item));
+        row.append(button);
+        utteranceList.append(row);
+    });
+}
+
+function getVisibleWords() {
+    const query = utteranceSearch.value.trim().toLowerCase();
+    return words.filter(item => {
+        const matchesSearch = item.text.toLowerCase().includes(query);
+        return matchesSearch;
+    });
+}
+
+function switchToWordMode() {
+    if (wordModeEnabled) return;
+    wordModeEnabled = true;
+    wordMode.checked = true;
+    savePreference("wordMode", true);
+    wordNav.hidden = false;
+    windowControls.hidden = false;
+    progress.hidden = true;
+    document.querySelector("#audio-time").hidden = true;
+
+    // Build word list if not already built
+    if (words.length === 0) {
+        words = buildWordList();
+    }
+
+    renderWords();
+
+    // Hide utterance-specific controls
+    morphologyPanel.hidden = true;
+    revealCandidate = null;
+    revealedUtterance = null;
+
+    // If we have an active utterance, find the corresponding word
+    if (activeUtterance && !activeWord) {
+        const utteranceWords = words.filter(w => w.utteranceStart === activeUtterance.start && w.utteranceEnd === activeUtterance.end);
+        if (utteranceWords.length > 0) {
+            activeWord = utteranceWords[0];
+            activeWordIndex = words.indexOf(activeWord);
+        }
+    }
+
+    if (activeWord) {
+        const button = wordButtons.get(activeWord);
+        if (button) button.classList.add("active");
+        updateCaption(activeWord);
+    }
+}
+
+function switchToUtteranceMode() {
+    if (!wordModeEnabled) return;
+    wordModeEnabled = false;
+    wordMode.checked = false;
+    savePreference("wordMode", false);
+    wordNav.hidden = true;
+    windowControls.hidden = true;
+    progress.hidden = false;
+    document.querySelector("#audio-time").hidden = false;
+
+    renderUtterances();
+
+    // If we have an active word, find the corresponding utterance
+    if (activeWord && !activeUtterance) {
+        const utterance = utterances.find(u => u.start === activeWord.utteranceStart && u.end === activeWord.utteranceEnd);
+        if (utterance) {
+            activeUtterance = utterance;
+            const button = utteranceButtons.get(activeUtterance);
+            if (button) button.classList.add("active");
+            updateCaption(activeUtterance);
+        }
+    }
+}
+
+function prevWord() {
+    if (words.length === 0) return;
+    const current = activeWordIndex != null ? activeWordIndex : 0;
+    const next = Math.max(0, current - 1);
+    const word = words[next];
+    if (word) playWord(word);
+}
+
+function nextWord() {
+    if (words.length === 0) return;
+    const current = activeWordIndex != null ? activeWordIndex : words.length - 1;
+    const next = Math.min(words.length - 1, current + 1);
+    const word = words[next];
+    if (word) playWord(word);
+}
+
+function randomWord() {
+    if (words.length === 0) return;
+    const index = Math.floor(Math.random() * words.length);
+    const word = words[index];
+    if (word) playWord(word);
+}
+
+async function playWord(word) {
+    const thisSelection = selectionId;
+    const thisUtteranceRequest = ++utteranceRequestId;
+    cancelPendingUtteranceStart();
+    pendingUtteranceSeek = null;
+
+    activeWord = word;
+    activeWordIndex = words.indexOf(word);
+    highlightedMorpheme = null;
+    morphologyPanel.replaceChildren();
+    morphologyPanel.hidden = true;
+
+    wordButtons.forEach((button, w) => {
+        button.classList.toggle("active", w === word);
+    });
+
+    const button = wordButtons.get(word);
+    if (button) {
+        const pageY = window.scrollY;
+        let attempts = 0;
+        const maxAttempts = 6;
+        function retryCaptionScroll() {
+            attempts += 1;
+            if (attempts > maxAttempts) return;
+            const remainingDelta = pageY - window.scrollY;
+            if (Math.abs(remainingDelta) > 1) {
+                window.scrollBy(0, remainingDelta);
+                requestAnimationFrame(retryCaptionScroll);
+            }
+        }
+        button.blur();
+        updateCaption(word);
+        window.scrollBy(0, pageY - window.scrollY);
+        button.focus({ preventScroll: true });
+        requestAnimationFrame(retryCaptionScroll);
+    }
+
+    const seekAndPlay = async () => {
+        if (
+            thisSelection !== selectionId ||
+            thisUtteranceRequest !== utteranceRequestId
+        ) return;
+        try {
+            pendingUtteranceSeek = {
+                start: word.start,
+                selectionId: thisSelection,
+                requestId: thisUtteranceRequest,
+            };
+
+            // Apply context window
+            const left = Number(windowLeft.value) || 0;
+            const right = Number(windowRight.value) || 0;
+            const startTime = Math.max(0, word.start - left);
+            const endTime = Math.min(estimatedDuration, word.end + right);
+
+            player.currentTime = startTime;
+            activeUtteranceEnd = endTime;
+            requestPlayback(true);
+        } catch (error) {
+            if (pendingUtteranceSeek?.requestId === thisUtteranceRequest) {
+                pendingUtteranceSeek = null;
+            }
+            activeUtteranceEnd = null;
+            setStatus(`Playback failed: ${error.message}`, "error");
+        }
+    };
+
+    if (!player.src && pendingAudioUrl) {
+        const blobUrl = await resolveAudioUrl(currentClip);
+        player.src = blobUrl;
+        player.playbackRate = Number(speed.value);
+        player.volume = Math.min(Math.max(Number(volumeSlider.value), 0), 1);
+        await new Promise(resolve => player.addEventListener("loadedmetadata", resolve, { once: true }));
+    }
+    if (player.readyState >= 1) {
+        await seekAndPlay();
+    } else {
+        pendingUtteranceStart = seekAndPlay;
+        player.addEventListener("loadedmetadata", seekAndPlay, { once: true });
+    }
+}
+
+function updateActiveWord(time) {
+    let current = null;
+    for (const item of words) {
+        if (item.start <= time) {
+            if (current === null || item.start >= current.start) current = item;
+        } else {
+            break;
+        }
+    }
+    if (current !== activeWord) {
+        highlightedMorpheme = null;
+        activeWord = current;
+        activeWordIndex = words.indexOf(current);
+        wordButtons.forEach(button => button.classList.remove("active"));
+        const button = current ? wordButtons.get(current) : null;
+        if (button) button.classList.add("active");
+        updateCaption(current);
+    }
+}
+
+function updateCaptionForWord(item) {
+    const showRevealedCaption = item !== null && revealedWord === item;
+    const captionsVisible = captionsEnabled.checked || showRevealedCaption;
+    if (!captionsVisible) {
+        highlightedMorpheme = null;
+        caption.textContent = "Captions are off";
+        caption.classList.add("disabled");
+        caption.classList.remove("word-mode");
+        morphologyPanel.hidden = true;
+        return;
+    }
+    caption.classList.remove("disabled");
+    caption.classList.add("word-mode");
+    renderCaptionTextForWord(item);
+    renderMorphologyForWord(item);
+}
+
+function renderCaptionTextForWord(item) {
+    const prevScrollY = window.scrollY;
+    const prevCaptionHeight = caption.offsetHeight;
+    caption.replaceChildren();
+    if (!item) return;
+    const content = document.createElement("span");
+    content.className = "caption-content";
+    caption.append(content);
+    const text = item.text;
+    if (!morphologyEnabled.checked) {
+        content.textContent = text;
+        const delta = caption.offsetHeight - prevCaptionHeight;
+        if (delta) window.scrollTo(0, prevScrollY - delta);
+        return;
+    }
+
+    const ranges = [];
+    item.morphology.forEach(([form, tag, start, length], index) => {
+        const rangeStart = Number(start);
+        const rangeLength = Number(length);
+        if (!Number.isInteger(rangeStart) || !Number.isInteger(rangeLength) || rangeLength <= 0) return;
+        ranges.push({ start: rangeStart, end: rangeStart + rangeLength, index, tag, form });
+    });
+    const boundaries = new Set([0, text.length]);
+    ranges.forEach(range => {
+        boundaries.add(Math.max(0, Math.min(text.length, range.start)));
+        boundaries.add(Math.max(0, Math.min(text.length, range.end)));
+    });
+    const points = [...boundaries].sort((a, b) => a - b);
+    points.slice(0, -1).forEach((start, pointIndex) => {
+        const end = points[pointIndex + 1];
+        const segment = text.slice(start, end);
+        const covering = ranges.filter(range => range.start <= start && range.end >= end);
+        if (!covering.length) {
+            content.append(document.createTextNode(segment));
+            return;
+        }
+        const span = document.createElement("span");
+        span.className = "caption-morpheme";
+        span.textContent = segment;
+        captionMorphemeRanges.set(span, covering);
+        const active = covering.find(range => range.index === highlightedMorpheme);
+        const colorRange = active || covering[0];
+        span.style.setProperty("--morpheme-color", morphemeColor(String(colorRange.tag)));
+        span.classList.toggle("is-highlighted", Boolean(active));
+        bindCaptionMorpheme(span, item, covering);
+        content.append(span);
+    });
+    const popupAnchor = content.querySelector(".caption-morpheme.is-highlighted");
+    if (popupAnchor) {
+        popupAnchor.classList.add("is-popup-anchor");
+        const popup = popupAnchor.querySelector(".caption-morpheme-popup");
+        if (popup) positionCaptionMorphemePopup(popupAnchor, popup);
+    }
+    const delta = caption.offsetHeight - prevCaptionHeight;
+    if (delta) window.scrollTo(0, prevScrollY - delta);
+}
+
+function renderMorphologyForWord(item) {
+    morphologyPanel.replaceChildren();
+    morphologyPanel.hidden = true;
+}
+
 function updateActiveUtterance(time) {
     let current = null;
     for (const item of utterances) {
@@ -1223,6 +1650,16 @@ playPause.addEventListener("click", async () => {
     }
     if (!player.src) return;
     const shouldPlay = !playbackIntent && (player.paused || player.ended);
+    if (wordModeEnabled) {
+        if (shouldPlay && activeWord) {
+            playWord(activeWord);
+            return;
+        }
+        if (!shouldPlay) {
+            requestPlayback(false);
+            return;
+        }
+    }
     if (shouldPlay && activeUtteranceEnd === null && revealCandidate !== null) {
         const previousRevealCandidate = revealCandidate;
         revealCandidate = null;
@@ -1328,10 +1765,24 @@ morphologyEnabled.addEventListener("change", () => {
 });
 hideShort.addEventListener("change", () => {
     savePreference("hideShort", hideShort.checked);
-    renderUtterances();
+    if (wordModeEnabled) renderWords();
+    else renderUtterances();
 });
+wordMode.addEventListener("change", () => {
+    savePreference("wordMode", wordMode.checked);
+    if (wordMode.checked) switchToWordMode();
+    else switchToUtteranceMode();
+});
+prevWordBtn.addEventListener("click", prevWord);
+nextWordBtn.addEventListener("click", nextWord);
+randomWordBtn.addEventListener("click", randomWord);
+windowLeft.addEventListener("input", () => savePreference("windowLeft", windowLeft.value));
+windowRight.addEventListener("input", () => savePreference("windowRight", windowRight.value));
 clipSearch.addEventListener("input", renderClips);
-utteranceSearch.addEventListener("input", renderUtterances);
+utteranceSearch.addEventListener("input", () => {
+    if (wordModeEnabled) renderWords();
+    else renderUtterances();
+});
 morphologyFilterButton.addEventListener("click", event => {
     event.stopPropagation();
     toggleMorphologyFilter();
@@ -1343,7 +1794,7 @@ downloadTrack.addEventListener("click", event => {
 });
 
 player.addEventListener("timeupdate", () => {
-    if (!currentClip || !utterances.length) return;
+    if (!currentClip) return;
     const time = player.currentTime;
     if (pendingUtteranceSeek) {
         const pending = pendingUtteranceSeek;
@@ -1364,11 +1815,15 @@ player.addEventListener("timeupdate", () => {
         activeUtteranceEnd = null;
         requestPlayback(false);
         player.currentTime = end;
-        updateCaption(activeUtterance);
+        updateCaption(wordModeEnabled ? activeWord : activeUtterance);
         updateAudioControls();
         return;
     }
-    updateActiveUtterance(time);
+    if (wordModeEnabled) {
+        updateActiveWord(time);
+    } else {
+        updateActiveUtterance(time);
+    }
     updateAudioControls();
 });
 

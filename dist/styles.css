@@ -829,6 +829,103 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 #volume-btn svg { width: 20px; height: 20px; flex: 0 0 auto; }
 #volume-btn svg path, #volume-btn i { fill: currentColor; color: currentColor; }
 
+.word-nav {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+}
+.word-nav button {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+.word-nav button:hover { border-color: var(--blue); background: var(--blue-soft); }
+
+.window-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+.window-label {
+    font-size: 0.76rem;
+    font-weight: 750;
+    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.window-slider-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.window-slider-label {
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+}
+.window-slider-group input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    height: 6px;
+    background: #e9e7da;
+    border-radius: 3px;
+    outline: none;
+    appearance: none;
+}
+.window-slider-group input[type="range"]::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--coral);
+    border-radius: 50%;
+    cursor: pointer;
+    appearance: none;
+}
+.window-slider-group input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--coral);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Caption box smaller in word mode */
+#caption.word-mode {
+    font-size: 1.15rem;
+    line-height: 1.4;
+}
+
+.word-row {
+    display: grid;
+    width: max-content;
+    min-width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e5e2d8;
+    border-radius: 11px;
+    background: #fffef9;
+    cursor: pointer;
+    text-align: center;
+}
+.word-row:hover { border-color: #bcc6e5; background: #f7f8fc; }
+.word-row.active { border-color: #8294d0; background: var(--blue-soft); }
+.word-text {
+    font-family: var(--font-reading);
+    font-size: 1.1rem;
+    color: #30334a;
+}
+
 .attribution {
     position: relative;
     z-index: 0;
