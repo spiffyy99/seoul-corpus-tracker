@@ -1721,6 +1721,12 @@ function updateActiveUtterance(time) {
             scrollActiveUtteranceIntoView(button);
         }
         updateCaption(current);
+        if (!captionsEnabled.checked && current) {
+            const prev = revealCandidate;
+            revealCandidate = current;
+            if (prev !== current) syncUtteranceReveal(prev);
+            syncUtteranceReveal(current);
+        }
     }
 }
 
