@@ -66,6 +66,115 @@ let posTags = {};
 let highlightedMorpheme = null;
 let playPausesHidden = false;
 
+// Audio buffer state (Web Audio API for precise utterance/word playback)
+let audioCtx = null;
+let audioGainNode = null;
+let audioBuffer = null;
+let bufferSource = null;
+let bufferStartTime = 0;
+let bufferOffset = 0;
+let bufferPlaying = false;
+
+function ensureAudioContext() {
+    if (audioCtx) return audioCtx;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioGainNode = audioCtx.createGain();
+    audioGainNode.gain.value = 1;
+    try { audioGainNode.connect(audioCtx.destination); } catch {}
+    return audioCtx;
+}
+
+async function decodeClipBuffer(clipName) {
+    const blobUrl = `/api/clips/${encodeURIComponent(clipName)}/play`;
+    const response = await fetch(blobUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const ctx = ensureAudioContext();
+    if (ctx.state === "suspended") await ctx.resume();
+    audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    bufferOffset = 0;
+}
+
+function stopBuffer() {
+    if (bufferSyncFrame) {
+        cancelAnimationFrame(bufferSyncFrame);
+        bufferSyncFrame = null;
+    }
+    if (bufferSource) {
+        try { bufferSource.stop(); } catch {}
+        bufferSource = null;
+    }
+    if (bufferPlaying) {
+        bufferOffset = Math.min(
+            bufferOffset + (audioCtx.currentTime - bufferStartTime) * (Number(speed.value) || 1),
+            audioBuffer ? audioBuffer.duration : 0
+        );
+        bufferStartTime = 0;
+    }
+    bufferPlaying = false;
+    player.pause();
+}
+
+async function playBufferFrom(startSec) {
+    if (!audioBuffer) return;
+    stopBuffer();
+    const ctx = ensureAudioContext();
+    if (ctx.state === "suspended") await ctx.resume();
+    const rate = Number(speed.value) || 1;
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.playbackRate.value = rate;
+    source.connect(audioGainNode);
+    bufferSource = source;
+    bufferStartTime = ctx.currentTime;
+    bufferOffset = startSec;
+    source.start(0, startSec);
+    bufferPlaying = true;
+    source.onended = () => {
+        if (bufferSource === source) {
+            bufferSource = null;
+            bufferPlaying = false;
+            playbackIntent = false;
+            playbackPending = false;
+            bufferStartTime = 0;
+            bufferOffset = audioBuffer.duration;
+        }
+    };
+    syncBufferTime();
+}
+
+let bufferSyncFrame = null;
+
+function syncBufferTime() {
+    if (!bufferPlaying || !bufferSource) {
+        bufferSyncFrame = null;
+        return;
+    }
+    const time = getBufferTime();
+    if (activeUtteranceEnd !== null && time >= activeUtteranceEnd) {
+        const end = activeUtteranceEnd;
+        activeUtteranceEnd = null;
+        playbackIntent = false;
+        playbackPending = false;
+        stopBuffer();
+        updateCaption(wordModeEnabled ? activeWord : activeUtterance);
+        updateAudioControls();
+        return;
+    }
+    if (wordModeEnabled) {
+        updateActiveWord(time);
+    } else {
+        updateActiveUtterance(time);
+    }
+    updateAudioControls();
+    bufferSyncFrame = requestAnimationFrame(syncBufferTime);
+}
+
+function getBufferTime() {
+    if (!bufferPlaying || !audioBuffer) return bufferOffset;
+    const elapsed = (audioCtx.currentTime - bufferStartTime) * (Number(speed.value) || 1);
+    return Math.min(bufferOffset + elapsed, audioBuffer.duration);
+}
+
 // Word mode state
 let wordModeEnabled = false;
 let words = [];
@@ -267,7 +376,7 @@ function restorePreferences() {
         if (ctx) {
             if (ctx.state === "suspended") ctx.resume();
             player.volume = 1;
-            gainNode.gain.value = vol;
+            audioGainNode.gain.value = vol;
         }
     } else {
         player.volume = Math.min(Math.max(vol, 0), 1);
@@ -366,10 +475,11 @@ function setEstimatedDuration() {
 }
 
 function updateAudioControls() {
-    const currentTime = Number.isFinite(player.currentTime) ? player.currentTime : 0;
-    if (!seeking) progress.value = String(Math.min(currentTime, estimatedDuration));
-    audioTime.textContent = `${formatTime(currentTime)} / ${formatTime(estimatedDuration)}`;
-    const playing = playbackIntent || (!player.paused && !player.ended);
+    const currentTime = audioBuffer ? getBufferTime() : player.currentTime;
+    const time = Number.isFinite(currentTime) ? currentTime : 0;
+    if (!seeking) progress.value = String(Math.min(time, estimatedDuration));
+    audioTime.textContent = `${formatTime(time)} / ${formatTime(estimatedDuration)}`;
+    const playing = playbackIntent || bufferPlaying || (!player.paused && !player.ended);
     playPause.setAttribute("aria-label", playing ? "Pause recording" : "Play recording");
     playPause.innerHTML = playing
         ? '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 3h3v10H4zm5 0h3v10H9z" fill="currentColor"/></svg><span>Pause</span>'
@@ -395,7 +505,22 @@ function requestPlayback(shouldPlay) {
     const requestId = ++playbackRequestId;
 
     if (!shouldPlay) {
-        player.pause();
+        if (bufferPlaying) {
+            stopBuffer();
+        } else {
+            player.pause();
+        }
+        updateAudioControls();
+        return;
+    }
+
+    if (audioBuffer) {
+        if (bufferPlaying) return;
+        const currentTime = getBufferTime();
+        if (estimatedDuration > 0 && currentTime >= estimatedDuration) {
+            bufferOffset = 0;
+        }
+        playBufferFrom(currentTime);
         updateAudioControls();
         return;
     }
@@ -410,7 +535,7 @@ function requestPlayback(shouldPlay) {
         if (ctx) {
             if (ctx.state === "suspended") ctx.resume();
             player.volume = 1;
-            gainNode.gain.value = vol;
+            audioGainNode.gain.value = vol;
         }
     } else {
         player.volume = Math.min(Math.max(vol, 0), 1);
@@ -484,6 +609,8 @@ async function selectClip(name) {
     utteranceRequestId += 1;
     cancelPendingUtteranceStart();
     pendingUtteranceSeek = null;
+    stopBuffer();
+    audioBuffer = null;
     currentClip = name;
     savePreference("selectedClip", name);
     mainPanel.classList.add("has-selection");
@@ -789,8 +916,10 @@ async function playUtterance(item) {
                 selectionId: thisSelection,
                 requestId: thisUtteranceRequest,
             };
-            player.currentTime = item.start;
-            requestPlayback(true);
+            if (!audioBuffer) {
+                await decodeClipBuffer(currentClip);
+            }
+            await playBufferFrom(item.start);
         } catch (error) {
             if (pendingUtteranceSeek?.requestId === thisUtteranceRequest) {
                 pendingUtteranceSeek = null;
@@ -800,19 +929,7 @@ async function playUtterance(item) {
         }
     };
 
-    if (!player.src && pendingAudioUrl) {
-        const blobUrl = await resolveAudioUrl(currentClip);
-        player.src = blobUrl;
-        player.playbackRate = Number(speed.value);
-        player.volume = Math.min(Math.max(Number(volumeSlider.value), 0), 1);
-        await new Promise(resolve => player.addEventListener("loadedmetadata", resolve, { once: true }));
-    }
-    if (player.readyState >= 1) {
-        await seekAndPlay();
-    } else {
-        pendingUtteranceStart = seekAndPlay;
-        player.addEventListener("loadedmetadata", seekAndPlay, { once: true });
-    }
+    await seekAndPlay();
 }
 
 function morphologyDescription(form, tag) {
@@ -1546,10 +1663,12 @@ async function playWord(word) {
             const right = Number(windowRight.value) || 0;
             const startTime = Math.max(0, word.start - left);
             const endTime = Math.min(estimatedDuration, word.end + right);
-
-            player.currentTime = startTime;
             activeUtteranceEnd = endTime;
-            requestPlayback(true);
+
+            if (!audioBuffer) {
+                await decodeClipBuffer(currentClip);
+            }
+            await playBufferFrom(startTime);
         } catch (error) {
             if (pendingUtteranceSeek?.requestId === thisUtteranceRequest) {
                 pendingUtteranceSeek = null;
@@ -1559,19 +1678,7 @@ async function playWord(word) {
         }
     };
 
-    if (!player.src && pendingAudioUrl) {
-        const blobUrl = await resolveAudioUrl(currentClip);
-        player.src = blobUrl;
-        player.playbackRate = Number(speed.value);
-        player.volume = Math.min(Math.max(Number(volumeSlider.value), 0), 1);
-        await new Promise(resolve => player.addEventListener("loadedmetadata", resolve, { once: true }));
-    }
-    if (player.readyState >= 1) {
-        await seekAndPlay();
-    } else {
-        pendingUtteranceStart = seekAndPlay;
-        player.addEventListener("loadedmetadata", seekAndPlay, { once: true });
-    }
+    await seekAndPlay();
 }
 
 function updateActiveWord(time) {
@@ -1697,16 +1804,15 @@ speed.addEventListener("input", () => {
     savePreference("speed", rate);
 });
 
-let audioCtx, gainNode;
 function ensureAudioGraph() {
     if (audioCtx) return audioCtx;
     try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        gainNode = audioCtx.createGain();
-        gainNode.gain.value = 1;
+        audioGainNode = audioCtx.createGain();
+        audioGainNode.gain.value = 1;
         const source = audioCtx.createMediaElementSource(player);
-        source.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
+        source.connect(audioGainNode);
+        audioGainNode.connect(audioCtx.destination);
     } catch (e) {
         console.error("Volume graph failed:", e);
         return null;
@@ -1727,7 +1833,7 @@ volumeSlider.addEventListener("input", () => {
         if (ctx) {
             if (ctx.state === "suspended") ctx.resume();
             player.volume = 1;
-            gainNode.gain.value = vol;
+            audioGainNode.gain.value = vol;
         }
     } else {
         player.volume = vol;
@@ -1837,7 +1943,7 @@ downloadTrack.addEventListener("click", event => {
 
 player.addEventListener("timeupdate", () => {
     if (!currentClip) return;
-    const time = player.currentTime;
+    const time = bufferPlaying ? getBufferTime() : player.currentTime;
     if (pendingUtteranceSeek) {
         const pending = pendingUtteranceSeek;
         const requestIsCurrent =
@@ -1845,7 +1951,7 @@ player.addEventListener("timeupdate", () => {
             pending.requestId === utteranceRequestId;
         if (!requestIsCurrent) {
             pendingUtteranceSeek = null;
-        } else if (player.seeking || time < pending.start) {
+        } else if ((bufferPlaying ? false : player.seeking) || time < pending.start) {
             updateAudioControls();
             return;
         } else {
@@ -1855,8 +1961,9 @@ player.addEventListener("timeupdate", () => {
     if (activeUtteranceEnd !== null && time >= activeUtteranceEnd) {
         const end = activeUtteranceEnd;
         activeUtteranceEnd = null;
-        requestPlayback(false);
-        player.currentTime = end;
+        if (bufferPlaying) stopBuffer();
+        else requestPlayback(false);
+        if (!bufferPlaying) player.currentTime = end;
         updateCaption(wordModeEnabled ? activeWord : activeUtterance);
         updateAudioControls();
         return;
