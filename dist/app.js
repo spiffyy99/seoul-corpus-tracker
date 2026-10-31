@@ -1599,11 +1599,14 @@ async function playWord(word) {
     cancelPendingUtteranceStart();
     pendingUtteranceSeek = null;
 
+    const prevWord = activeWord;
     activeWord = word;
     activeWordIndex = words.indexOf(word);
     highlightedMorpheme = null;
-    windowLeft.value = "0";
-    windowRight.value = "0";
+    if (!prevWord || word !== prevWord) {
+        windowLeft.value = "0";
+        windowRight.value = "0";
+    }
 
     const previousRevealCandidate = revealCandidate;
     if (captionsEnabled.checked) {
