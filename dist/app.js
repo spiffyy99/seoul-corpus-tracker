@@ -213,15 +213,28 @@ let idbDb = null;
 function openIdb() {
     return new Promise((resolve, reject) => {
         if (idbDb) return resolve(idbDb);
-        const req = indexedDB.open(IDB_NAME, 1);
+        const req = indexedDB.open(IDB_NAME, 2);
         req.onupgradeneeded = () => {
-            req.result.createObjectStore(IDB_STORE, { keyPath: "name" });
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.createObjectStore(IDB_STORE, { keyPath: "name" });
+            }
         };
         req.onsuccess = () => {
-            idbDb = req.result;
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.close();
+                indexedDB.deleteDatabase(IDB_NAME);
+                resolve(openIdb());
+                return;
+            }
+            idbDb = db;
             resolve(idbDb);
         };
-        req.onerror = () => reject(req.error);
+        req.onerror = () => {
+            idbDb = null;
+            resolve(null);
+        };
     });
 }
 
