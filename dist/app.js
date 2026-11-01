@@ -1521,8 +1521,8 @@ function switchToWordMode() {
     if (activeWord) {
         const button = wordButtons.get(activeWord);
         if (button) {
-            button.classList.add("active");
-            button.scrollIntoView({ block: "center", inline: "nearest" });
+                button.classList.add("active");
+                button.scrollIntoView({ block: "center", inline: "nearest", preventScroll: true });
         }
         updateCaption(activeWord);
         requestPlayback(false);
@@ -1560,7 +1560,7 @@ function switchToUtteranceMode() {
             const button = utteranceButtons.get(activeUtterance);
             if (button) {
                 button.classList.add("active");
-                button.scrollIntoView({ block: "center", inline: "nearest" });
+                button.scrollIntoView({ block: "center", inline: "nearest", preventScroll: true });
             }
             updateCaption(activeUtterance);
         }
