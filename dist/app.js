@@ -114,20 +114,98 @@ function stopBuffer() {
     player.pause();
 }
 
+async function processAudioWithSoundTouch(audioBuffer, rate) {
+    const channels = audioBuffer.numberOfChannels;
+    const frames = audioBuffer.length;
+    const soundTouch = new SoundTouch();
+
+    soundTouch.tempo = rate;
+
+    // Interleave channel samples: L, R, L, R...
+    // Duplicate mono to stereo – SoundTouch expects 2 samples per frame
+    const input = new Float32Array(frames * 2);
+
+    for (let i = 0; i < frames; i++) {
+        for (let ch = 0; ch < channels; ch++) {
+            input[i * channels + ch] = audioBuffer.getChannelData(ch)[i];
+        }
+    }
+
+    soundTouch.inputBuffer.putSamples(input, 0, frames);
+
+    const chunks = [];
+    let totalSamples = 0;
+
+    // Process until all available input has been consumed.
+    while (soundTouch.inputBuffer.frameCount > 0) {
+        soundTouch.process();
+
+        const available = soundTouch.outputBuffer.frameCount;
+        if (available > 0) {
+            const chunk = new Float32Array(available * 2);
+
+            soundTouch.outputBuffer.receiveSamples(chunk, available);
+
+            chunks.push(chunk);
+            totalSamples += available;
+        }
+    }
+
+    // Collect any remaining output.
+    const remaining = soundTouch.outputBuffer.frameCount;
+
+    if (remaining > 0) {
+        const chunk = new Float32Array(remaining * 2);
+        soundTouch.outputBuffer.receiveSamples(chunk, remaining);
+        chunks.push(chunk);
+        totalSamples += remaining;
+    }
+
+    if (totalSamples === 0) {
+        throw new Error("SoundTouch produced no audio samples.");
+    }
+
+    const processedBuffer = audioCtx.createBuffer(
+                1,
+                totalSamples,
+                audioBuffer.sampleRate
+            );
+
+    let offset = 0;
+
+    for (const chunk of chunks) {
+            const chunkFrames = chunk.length / 2; // 2 samples per frame (stereo)
+            for (let i = 0; i < chunkFrames; i++) {
+                processedBuffer.getChannelData(0)[offset + i] = chunk[i * 2];
+            }
+            offset += chunkFrames;
+        }
+
+    return processedBuffer;
+}
+
 async function playBufferFrom(startSec) {
-    if (!audioBuffer) return;
     stopBuffer();
-    const ctx = ensureAudioContext();
-    if (ctx.state === "suspended") await ctx.resume();
+    if (!audioBuffer) {
+        await decodeClipBuffer(currentClip);
+    }
+    if (!audioBuffer) return;
+    const ctx = await ensureAudioContext();
     const rate = Number(speed.value) || 1;
+    const cacheKey = `${currentClip}@${rate}`;
+        let processedBuffer = audioCache.get(cacheKey);
+        if (!processedBuffer) {
+            processedBuffer = await processAudioWithSoundTouch(audioBuffer, rate);
+            audioCache.set(cacheKey, processedBuffer);
+        }
+
     const source = ctx.createBufferSource();
-    source.buffer = audioBuffer;
-    source.playbackRate.value = rate;
+    source.buffer = processedBuffer;
     source.connect(audioGainNode);
     bufferSource = source;
     bufferStartTime = ctx.currentTime;
     bufferOffset = startSec;
-    source.start(0, startSec);
+    source.start(0, startSec / rate);
     bufferPlaying = true;
     source.onended = () => {
         if (bufferSource === source) {
@@ -1820,6 +1898,16 @@ progress.addEventListener("change", () => {
 });
 
 speed.addEventListener("input", () => {
+    const rate = Number(speed.value);
+    // Re‑process the current clip at the new rate and cache it
+    if (currentClip) {
+        const cacheKey = `${currentClip}@${rate}`;
+        audioCache.delete(cacheKey); // force re‑process next time
+    }
+    player.playbackRate = rate;
+    speedValue.textContent = `${rate.toFixed(2)}×`;
+    savePreference("speed", rate);
+});
     const rate = Number(speed.value);
     player.playbackRate = rate;
     speedValue.textContent = `${rate.toFixed(2)}×`;
