@@ -145,14 +145,22 @@ async function playSegment(startSec, endSec) {
         }
     }
 
-    // Build a *mono* AudioBuffer from the processed stereo data
-    const processed = ctx.createBuffer(1, total, sampleRate);
-    const outData = processed.getChannelData(0);
-    let offset = 0;
-    for (const c of chunks) {
-        for (let i = 0; i < c.length; i += 2) {
-            outData[offset++] = c[i]; // channel 0
+    // Build a *mono* AudioBuffer from the processed stereo data.
+    // If SoundTouch produced no output (e.g. an empty/edge segment), fall back
+    // to the raw segment so we don't hit createBuffer(1, 0, rate).
+    let processed;
+    if (total > 0) {
+        processed = ctx.createBuffer(1, total, sampleRate);
+        const outData = processed.getChannelData(0);
+        let offset = 0;
+        for (const c of chunks) {
+            for (let i = 0; i < c.length; i += 2) {
+                outData[offset++] = c[i]; // channel 0
+            }
         }
+    } else {
+        processed = ctx.createBuffer(1, frames, sampleRate);
+        processed.getChannelData(0).set(segment);
     }
 
     // Play the processed segment
@@ -441,7 +449,10 @@ function restorePreferences() {
     }
 
     captionsEnabled.checked = preferences.captionsEnabled === true;
-    hideShort.checked = preferences.hideShort !== false;
+    // hideShort is shared between utterance and word modes with different
+    // labels/behaviours, so keep two independent preferences and sync the
+    // checkbox when switching modes.
+    hideShort.checked = preferences.hideShortUtterances !== false;
     const rate = Number(speed.value);
     speedValue.textContent = `${rate.toFixed(2)}×`;
     player.playbackRate = rate;
@@ -1591,6 +1602,9 @@ function switchToWordMode() {
     playPausesHidden = true;
     playPause.style.display = "none";
     hideShortLabel.textContent = "Hide duplicate words";
+    // Remember the utterance-mode setting and restore the word-mode one
+    preferences.hideShortUtterances = hideShort.checked;
+    hideShort.checked = preferences.hideShortWords !== false;
 
     // Build word list once (cached)
     if (!wordsBuilt) {
@@ -1651,6 +1665,9 @@ function switchToUtteranceMode() {
     hideShort.disabled = false;
     hideShort.parentElement.style.opacity = "1";
     hideShortLabel.textContent = "Hide utterances with 3 characters or fewer";
+    // Remember the word-mode setting and restore the utterance-mode one
+    preferences.hideShortWords = hideShort.checked;
+    hideShort.checked = preferences.hideShortUtterances !== false;
 
     renderUtterances();
 
@@ -1982,9 +1999,13 @@ morphologyEnabled.addEventListener("change", () => {
     restoreViewportPosition();
 });
 hideShort.addEventListener("change", () => {
-    savePreference("hideShort", hideShort.checked);
-    if (wordModeEnabled) renderWords();
-    else renderUtterances();
+    if (wordModeEnabled) {
+        savePreference("hideShortWords", hideShort.checked);
+        renderWords();
+    } else {
+        savePreference("hideShortUtterances", hideShort.checked);
+        renderUtterances();
+    }
 });
 wordMode.addEventListener("click", () => {
     const checked = wordMode.getAttribute("aria-checked") === "true";
