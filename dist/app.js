@@ -977,6 +977,8 @@ function renderUtterances() {
         utteranceList.append(row);
         syncUtteranceReveal(item);
     });
+
+    scrollActiveItemIntoViewIfPresent();
 }
 
 async function playUtterance(item) {
@@ -1470,6 +1472,26 @@ function scrollActiveUtteranceIntoView(button) {
     }
 }
 
+function scrollActiveItemIntoViewCenter(button) {
+    // Center the active item within the list box (list-only scroll, never the page).
+    // scrollIntoView on a child of a scroll container scrolls that container,
+    // not the page — the list has overflow:auto + overscroll-behavior:contain.
+    requestAnimationFrame(() => {
+        button.scrollIntoView({ block: "center", inline: "nearest" });
+    });
+}
+
+function scrollActiveItemIntoViewIfPresent() {
+    // After a filter/search re-render, keep the active item centered if it is
+    // still visible. If it was filtered out, do nothing. The render functions
+    // mark the active item with the "active" class, so look that up fresh from
+    // the DOM (the old Map references are detached after re-render).
+    const button = utteranceList.querySelector("button.utterance.active");
+    if (button) {
+        requestAnimationFrame(() => scrollActiveItemIntoViewCenter(button));
+    }
+}
+
 function isNoiseText(text) {
     if (!text) return true;
     const trimmed = text.trim();
@@ -1547,6 +1569,7 @@ function renderWords() {
     if (!filtered.length) {
         utteranceList.append(createEmptyState("No words match", "Adjust the text search or filters."));
         utteranceCount.textContent = `${filtered.length} shown / ${words.length} total words`;
+        scrollActiveItemIntoViewIfPresent();
         return;
     }
 
@@ -1570,12 +1593,16 @@ function renderWords() {
         text.textContent = textHidden ? "" : item.text;
         button.append(time, text);
         wordButtons.set(item, button);
-        if (activeWord === item) button.classList.add("active");
+        if (activeWord === item) {
+            button.classList.add("active");
+        }
         button.addEventListener("click", () => playWord(item));
         row.append(button);
         utteranceList.append(row);
         syncUtteranceReveal(item);
     });
+
+    scrollActiveItemIntoViewIfPresent();
 }
 
 function getVisibleWords() {
@@ -1645,11 +1672,11 @@ function switchToWordMode() {
         }
     }
 
-    if (activeWord) {
+if (activeWord) {
         const button = wordButtons.get(activeWord);
         if (button) {
-                button.classList.add("active");
-                button.scrollIntoView({ block: "center", inline: "nearest", preventScroll: true });
+            button.classList.add("active");
+            scrollActiveItemIntoViewCenter(button);
         }
         updateCaption(activeWord);
         requestPlayback(false);
@@ -1690,7 +1717,7 @@ function switchToUtteranceMode() {
             const button = utteranceButtons.get(activeUtterance);
             if (button) {
                 button.classList.add("active");
-                button.scrollIntoView({ block: "center", inline: "nearest", preventScroll: true });
+                scrollActiveItemIntoViewCenter(button);
             }
             updateCaption(activeUtterance);
         }
@@ -1773,9 +1800,7 @@ async function playWord(word) {
         updateCaption(word);
         window.scrollBy(0, pageY - window.scrollY);
         button.focus({ preventScroll: true });
-        const rect = button.getBoundingClientRect();
-        const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
-        if (!isVisible) button.scrollIntoView({ block: "center", inline: "nearest" });
+        scrollActiveUtteranceIntoView(button);
         requestAnimationFrame(retryCaptionScroll);
     }
 
