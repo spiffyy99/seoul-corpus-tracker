@@ -48,6 +48,8 @@ let clips = [];
 let currentClip = null;
 let utterances = [];
 let activeUtteranceEnd = null;
+let activeUtteranceStart = 0;
+let afterUtteranceEnd = false;
 let activeUtterance = null;
 let revealCandidate = null;
 let revealedUtterance = null;
@@ -88,11 +90,99 @@ async function decodeClipBuffer(clipName) {
     const blobUrl = `/api/clips/${encodeURIComponent(clipName)}/play`;
     const response = await fetch(blobUrl);
     const arrayBuffer = await response.arrayBuffer();
-    const ctx = ensureAudioContext();
+    const ctx = await ensureAudioContext();
     if (ctx.state === "suspended") await ctx.resume();
     audioBuffer = await ctx.decodeAudioData(arrayBuffer);
     bufferOffset = 0;
 }
+
+// ------------------------------------------------------------------
+// Play a *segment* of the current clip with SoundTouch
+// ------------------------------------------------------------------
+async function playSegment(startSec, endSec) {
+    stopBuffer();
+    // Ensure we have the decoded AudioBuffer
+    if (!audioBuffer) await decodeClipBuffer(currentClip);
+    const ctx = audioCtx || ensureAudioContext();
+    if (!audioCtx) audioCtx = ctx;
+    if (ctx.state == "suspended") await ctx.resume();
+    const sampleRate = audioBuffer.sampleRate;
+    const startFrame = Math.floor(startSec * sampleRate);
+    const endFrame = Math.floor(endSec * sampleRate);
+    const frames = endFrame - startFrame;
+    if (frames <= 0) return;
+    const channels = audioBuffer.numberOfChannels; // usually 1
+
+    // Grab the samples for the segment
+    const segment = new Float32Array(frames * channels);
+    for (let ch = 0; ch < channels; ch++) {
+        const src = audioBuffer.getChannelData(ch);
+        segment.set(src.subarray(startFrame, endFrame), ch * frames);
+    }
+
+    // Duplicate mono → stereo (SoundTouch expects 2 samples per frame)
+    const stereo = new Float32Array(frames * 2);
+    for (let i = 0; i < frames; i++) {
+        stereo[i * 2] = segment[i];
+        stereo[i * 2 + 1] = segment[i];
+    }
+
+    // Run SoundTouch on the *segment only*
+    const st = new SoundTouch();
+    st.tempo = Number(speed.value) || 1;
+    st.inputBuffer.putSamples(stereo, 0, frames);
+
+    const chunks = [];
+    let total = 0;
+    while (st.inputBuffer.frameCount > 0) {
+        st.process();
+        const avail = st.outputBuffer.frameCount;
+        if (avail > 0) {
+            const chunk = new Float32Array(avail * 2);
+            st.outputBuffer.receiveSamples(chunk, avail);
+            chunks.push(chunk);
+            total += avail;
+        }
+    }
+
+    // Build a *mono* AudioBuffer from the processed stereo data
+    const processed = ctx.createBuffer(1, total, sampleRate);
+    const outData = processed.getChannelData(0);
+    let offset = 0;
+    for (const c of chunks) {
+        for (let i = 0; i < c.length; i += 2) {
+            outData[offset++] = c[i]; // channel 0
+        }
+    }
+
+    // Play the processed segment
+    const source = ctx.createBufferSource();
+    source.buffer = processed;
+    source.connect(audioGainNode);
+    source.start(0, 0);
+    bufferSource = source;
+    bufferStartTime = ctx.currentTime;
+    bufferOffset = startSec; // remember where we started
+    bufferPlaying = true;
+    playbackIntent = true;
+    playbackPending = false;
+    updateAudioControls();
+    syncBufferTime();
+
+// When the segment ends, switch back to blob playback
+    source.onended = () => {
+        bufferPlaying = false;
+        bufferOffset = endSec; // remember where we finished
+        activeUtteranceEnd = null;
+        playbackIntent = false;
+        playbackPending = false;
+        player.pause();
+        try { player.currentTime = endSec; } catch {}
+        updateAudioControls();
+    };
+
+}
+
 
 function stopBuffer() {
     if (bufferSyncFrame) {
@@ -100,6 +190,10 @@ function stopBuffer() {
         bufferSyncFrame = null;
     }
     if (bufferSource) {
+        // Detach the onended handler before stopping so it doesn't overwrite
+        // bufferOffset/player.currentTime with the utterance end when pausing
+        // mid-utterance.
+        bufferSource.onended = null;
         try { bufferSource.stop(); } catch {}
         bufferSource = null;
     }
@@ -108,117 +202,13 @@ function stopBuffer() {
             bufferOffset + (audioCtx.currentTime - bufferStartTime) * (Number(speed.value) || 1),
             audioBuffer ? audioBuffer.duration : 0
         );
-        bufferStartTime = 0;
     }
+    bufferStartTime = 0;
     bufferPlaying = false;
+    try { if (audioBuffer) player.currentTime = bufferOffset; } catch {}
     player.pause();
 }
 
-async function processAudioWithSoundTouch(audioBuffer, rate) {
-    const channels = audioBuffer.numberOfChannels;
-    const frames = audioBuffer.length;
-    const soundTouch = new SoundTouch();
-
-    soundTouch.tempo = rate;
-
-    // Interleave channel samples: L, R, L, R...
-    // Duplicate mono to stereo – SoundTouch expects 2 samples per frame
-    const input = new Float32Array(frames * 2);
-
-    for (let i = 0; i < frames; i++) {
-        for (let ch = 0; ch < channels; ch++) {
-            input[i * channels + ch] = audioBuffer.getChannelData(ch)[i];
-        }
-    }
-
-    soundTouch.inputBuffer.putSamples(input, 0, frames);
-
-    const chunks = [];
-    let totalSamples = 0;
-
-    // Process until all available input has been consumed.
-    while (soundTouch.inputBuffer.frameCount > 0) {
-        soundTouch.process();
-
-        const available = soundTouch.outputBuffer.frameCount;
-        if (available > 0) {
-            const chunk = new Float32Array(available * 2);
-
-            soundTouch.outputBuffer.receiveSamples(chunk, available);
-
-            chunks.push(chunk);
-            totalSamples += available;
-        }
-    }
-
-    // Collect any remaining output.
-    const remaining = soundTouch.outputBuffer.frameCount;
-
-    if (remaining > 0) {
-        const chunk = new Float32Array(remaining * 2);
-        soundTouch.outputBuffer.receiveSamples(chunk, remaining);
-        chunks.push(chunk);
-        totalSamples += remaining;
-    }
-
-    if (totalSamples === 0) {
-        throw new Error("SoundTouch produced no audio samples.");
-    }
-
-    const processedBuffer = audioCtx.createBuffer(
-                1,
-                totalSamples,
-                audioBuffer.sampleRate
-            );
-
-    let offset = 0;
-
-    for (const chunk of chunks) {
-            const chunkFrames = chunk.length / 2; // 2 samples per frame (stereo)
-            for (let i = 0; i < chunkFrames; i++) {
-                processedBuffer.getChannelData(0)[offset + i] = chunk[i * 2];
-            }
-            offset += chunkFrames;
-        }
-
-    return processedBuffer;
-}
-
-async function playBufferFrom(startSec) {
-    stopBuffer();
-    if (!audioBuffer) {
-        await decodeClipBuffer(currentClip);
-    }
-    if (!audioBuffer) return;
-    const ctx = await ensureAudioContext();
-    const rate = Number(speed.value) || 1;
-    const cacheKey = `${currentClip}@${rate}`;
-        let processedBuffer = audioCache.get(cacheKey);
-        if (!processedBuffer) {
-            processedBuffer = await processAudioWithSoundTouch(audioBuffer, rate);
-            audioCache.set(cacheKey, processedBuffer);
-        }
-
-    const source = ctx.createBufferSource();
-    source.buffer = processedBuffer;
-    source.connect(audioGainNode);
-    bufferSource = source;
-    bufferStartTime = ctx.currentTime;
-    bufferOffset = startSec;
-    source.start(0, startSec / rate);
-    bufferPlaying = true;
-    source.onended = () => {
-        if (bufferSource === source) {
-            bufferSource = null;
-            bufferPlaying = false;
-            playbackIntent = false;
-            playbackPending = false;
-            bufferStartTime = 0;
-            bufferOffset = audioBuffer.duration;
-        }
-    };
-    syncBufferTime();
-}
 
 let bufferSyncFrame = null;
 
@@ -248,7 +238,8 @@ function syncBufferTime() {
 }
 
 function getBufferTime() {
-    if (!bufferPlaying || !audioBuffer) return bufferOffset;
+    if (!audioBuffer) return player.currentTime;
+    if (!bufferPlaying) return player.currentTime;
     const elapsed = (audioCtx.currentTime - bufferStartTime) * (Number(speed.value) || 1);
     return Math.min(bufferOffset + elapsed, audioBuffer.duration);
 }
@@ -566,7 +557,7 @@ function setEstimatedDuration() {
 }
 
 function updateAudioControls() {
-    const currentTime = audioBuffer ? getBufferTime() : player.currentTime;
+    const currentTime = bufferPlaying ? getBufferTime() : player.currentTime;
     const time = Number.isFinite(currentTime) ? currentTime : 0;
     if (!seeking) progress.value = String(Math.min(time, estimatedDuration));
     audioTime.textContent = `${formatTime(time)} / ${formatTime(estimatedDuration)}`;
@@ -579,15 +570,21 @@ function updateAudioControls() {
 }
 
 function finishPlaybackRequest(error, requestId) {
-    if (requestId !== playbackRequestId || !playbackIntent) return;
-    playbackIntent = false;
-    playbackPending = false;
-    updateAudioControls();
-
-    // A pending play request is expected to reject if a rapid pause cancels it.
-    if (error?.name !== "AbortError") {
+    if (requestId !== playbackRequestId) return;
+    // AbortError is expected when the buffer stops on its own (utterance end)
+    // or when a pause cancels a pending play. It should not clear playbackIntent,
+    // otherwise the next play press computes shouldPlay = false.
+    if (error && error.name !== "AbortError") {
+        playbackIntent = false;
+        playbackPending = false;
         setStatus(`Playback failed: ${error.message}`, "error");
+    } else {
+        // Play succeeded: the HTML5 player is now running natively, so clear
+        // the intent flag. Otherwise the next play press computes shouldPlay=false.
+        playbackIntent = false;
+        playbackPending = false;
     }
+    updateAudioControls();
 }
 
 function requestPlayback(shouldPlay) {
@@ -608,11 +605,30 @@ function requestPlayback(shouldPlay) {
     if (audioBuffer) {
         if (bufferPlaying) return;
         const currentTime = getBufferTime();
-        if (estimatedDuration > 0 && currentTime >= estimatedDuration) {
-            bufferOffset = 0;
+        bufferOffset = (estimatedDuration > 0 && currentTime >= estimatedDuration) ? 0 : currentTime;
+        player.pause();
+        player.currentTime = bufferOffset;
+        player.playbackRate = Number(speed.value);
+        const vol = Number(volumeSlider.value);
+        if (vol > 1) {
+            const ctx = ensureAudioGraph();
+            if (ctx) {
+                if (ctx.state === "suspended") ctx.resume();
+                player.volume = 1;
+                audioGainNode.gain.value = vol;
+            }
+        } else {
+            player.volume = Math.min(Math.max(vol, 0), 1);
         }
-        playBufferFrom(currentTime);
         updateAudioControls();
+        try {
+            const playRequest = player.play();
+            if (playRequest && typeof playRequest.catch === "function") {
+                playRequest.catch(error => finishPlaybackRequest(error, requestId));
+            }
+        } catch (error) {
+            finishPlaybackRequest(error, requestId);
+        }
         return;
     }
 
@@ -1010,7 +1026,7 @@ async function playUtterance(item) {
             if (!audioBuffer) {
                 await decodeClipBuffer(currentClip);
             }
-            await playBufferFrom(item.start);
+            await playSegment(item.start, item.end);
         } catch (error) {
             if (pendingUtteranceSeek?.requestId === thisUtteranceRequest) {
                 pendingUtteranceSeek = null;
@@ -1762,7 +1778,7 @@ async function playWord(word) {
             if (!audioBuffer) {
                 await decodeClipBuffer(currentClip);
             }
-            await playBufferFrom(startTime);
+            await playSegment(startTime, endTime);
         } catch (error) {
             if (pendingUtteranceSeek?.requestId === thisUtteranceRequest) {
                 pendingUtteranceSeek = null;
@@ -1908,11 +1924,6 @@ speed.addEventListener("input", () => {
     speedValue.textContent = `${rate.toFixed(2)}×`;
     savePreference("speed", rate);
 });
-    const rate = Number(speed.value);
-    player.playbackRate = rate;
-    speedValue.textContent = `${rate.toFixed(2)}×`;
-    savePreference("speed", rate);
-});
 
 function ensureAudioGraph() {
     if (audioCtx) return audioCtx;
@@ -2054,6 +2065,7 @@ downloadTrack.addEventListener("click", event => {
 player.addEventListener("timeupdate", () => {
     if (!currentClip) return;
     const time = bufferPlaying ? getBufferTime() : player.currentTime;
+    if (!bufferPlaying) bufferOffset = player.currentTime;
     if (pendingUtteranceSeek) {
         const pending = pendingUtteranceSeek;
         const requestIsCurrent =
