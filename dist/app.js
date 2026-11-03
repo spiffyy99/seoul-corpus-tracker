@@ -13,6 +13,10 @@ const volumeSliderWrap = document.querySelector("#volume-slider-wrap");
 const volumeSlider = document.querySelector("#volume-slider");
 const volumeIcon = document.querySelector("#volume-icon");
 const captionsEnabled = document.querySelector("#captions-enabled");
+
+// Pad word end timestamps by this many seconds so words don't feel cut off.
+// The transcript timestamps can be slightly tight; this gives a small margin.
+const WORD_END_PADDING = 0.1;
 const morphologyEnabled = document.querySelector("#morphology-enabled");
 const caption = document.querySelector("#caption");
 const hideShort = document.querySelector("#hide-short");
@@ -1509,7 +1513,9 @@ function extractWordsFromUtterance(utterance) {
         words.push({
             text: word,
             start: span ? Number(span[0]) : null,
-            end: span ? Number(span[1]) : null,
+            // Pad the end slightly so words don't feel cut off; the transcript
+            // timestamps can be a touch tight.
+            end: span ? Number(span[1]) + WORD_END_PADDING : null,
             morphology: wordMorphology,
             utteranceStart: utterance.start,
             utteranceEnd: utterance.end,
