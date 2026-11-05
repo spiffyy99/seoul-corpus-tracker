@@ -21,6 +21,18 @@ This document lists UI and functional regression tests for the K-Corpus Listener
 | Reveal state resets on search/filter/mode toggle | S7 |
 | Translation popup re-translates duplicate text | S8 |
 | Morphology HTML leaks into translation | S9 |
+| Context window / hide-short controls leak across corpora | C1, C2, C3 |
+| Clip name overflow on mobile | C4 |
+| Seeker not resetting on clip switch | C5 |
+| Attribution text wrong corpus | C6 |
+| English-only utterances stripped | C7 |
+| Word-mode toggle disabled for non-word corpora | C8 |
+| Clip list icon per corpus | C11 |
+| Audio served from sound_opus/<corpus>/ | C12 |
+| Context window / hide-short controls leak across corpora | C1, C2, C3 |
+| Clip name overflow on mobile | C4 |
+| Seeker not resetting on clip switch | C5 |
+| Attribution text wrong corpus | C6 |
 
 ## Framework
 
@@ -44,10 +56,12 @@ Plain JS, one spec file per concern. No Page Object Model needed at this scale.
 
 ```
 tests/
-  playback.spec.js   # playback control (P1-P10)
-  scroll.spec.js     # mode switching & scrolling (M1-M6)
-  preferences.spec.js # state & preferences (S1-S6)
-  audio.spec.js      # audio accuracy (A1-A4)
+  playback.spec.js     # playback control (P1-P10)
+  scroll.spec.js       # mode switching & scrolling (M1-M6)
+  preferences.spec.js  # state & preferences (S1-S10)
+  audio.spec.js        # audio accuracy (A1-A11)
+  corpora.spec.js      # corpus navigation & metadata (C1-C12)
+  data.spec.js         # data loading & filtering (D1-D5)
 ```
 
 ## Test Cases
@@ -118,6 +132,23 @@ tests/
 | D3  | Search filters | Typing in `#utterance-search` reduces visible rows |
 | D4  | Clip search | Typing in `#clip-search` filters clip list |
 | D5  | Network error | Graceful error message; no console crash |
+
+### 6. Corpora & Navigation
+
+| ID  | Test | Assert |
+|-----|------|--------|
+| C1  | Switch corpus via dropdown | `#corpus-select` filters clip list to that corpus only; `#library-count` updates |
+| C2  | Corpus filter persists | Reload → `#corpus-select` restores the saved filter |
+| C3  | Clip metadata chips | Conversational clip shows Topic/Gender/Age/Region chips; seoul clip shows Age/Gender/Interviewer/Segment |
+| C4  | Long clip names truncate on mobile | `.clip-name` and `.clip-detail` use `text-overflow: ellipsis`; no horizontal overflow of `#clip-list` |
+| C5  | Seeker resets on clip switch | Selecting a new clip sets `#progress.value = 0`, `#audio-time` = "0:00 / 0:00", `player.currentTime = 0` immediately |
+| C6  | Attribution matches corpus | `#attribution-tooltip` shows CC BY-NC 2.0 + OpenSLR for seoul; CC BY-NC-ND 4.0 for conversational/spontaneous |
+| C7  | English-only utterances stripped | Conversational/spontaneous JSONs contain no `[SONANT]`/`[ENS]`/`[LAUGHTER]` entries; only Korean text remains |
+| C8  | Word-mode toggle disabled for non-word corpora | `#word-mode` has `aria-disabled="true"` and `is-disabled` class; clicking it does not switch to word mode |
+| C9  | Context window hidden for non-word corpora | `#window-controls` is `hidden`; `#word-nav` is `hidden` when a conversational/spontaneous clip is loaded |
+| C10 | Hide-short checkbox enabled for all corpora | `#hide-short` is not disabled for conversational/spontaneous clips |
+| C11 | Clip list icon per corpus | Seoul clips show speaker number; conversational/spontaneous clips show a play icon (no emdash) |
+| C12 | Audio served from sound_opus/<corpus>/ | `/api/clips/<corpus>/<clip>/play` returns 200 with `audio/ogg; codecs=opus` |
 
 ## Implementation Patterns
 

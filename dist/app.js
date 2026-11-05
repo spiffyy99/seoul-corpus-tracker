@@ -892,6 +892,19 @@ async function selectClip(name) {
     // The HTML5 <audio> element keeps its currentTime across removeAttribute("src")
     // + load(), so reset it explicitly or the new clip resumes at the old time.
     try { player.currentTime = 0; } catch {}
+    // Reset display state that word mode toggles. selectClip sets
+    // wordModeEnabled=false directly (without calling switchToUtteranceMode),
+    // so the play button / seek bar would otherwise stay hidden from a previous
+    // word-mode clip.
+    playPause.style.display = "";
+    progress.hidden = false;
+    document.querySelector("#audio-time").hidden = false;
+    playPausesHidden = false;
+    windowControls.hidden = true;
+    wordNav.hidden = true;
+    hideShort.disabled = false;
+    hideShort.parentElement.style.opacity = "1";
+    hideShortLabel.textContent = "Hide utterances with 3 characters or fewer";
     downloadTrack.removeAttribute("href");
     downloadTrack.removeAttribute("download");
     downloadTrack.classList.add("is-disabled");
@@ -1769,10 +1782,13 @@ function getVisibleWords() {
 
 function updateWordModeEnabled() {
     if (!hasWordTimestamps) {
-        // Current clip has no word-level timestamps: grey out the toggle.
+        // Current clip has no word-level timestamps: grey out the toggle and hide
+        // the word-mode-only controls (context window sliders, word nav).
         wordMode.classList.add("is-disabled");
         wordMode.setAttribute("aria-disabled", "true");
         wordMode.title = "Word mode is unavailable for this corpus (no word-level timestamps)";
+        windowControls.hidden = true;
+        wordNav.hidden = true;
         if (wordModeEnabled) {
             switchToUtteranceMode();
         }
@@ -1780,6 +1796,11 @@ function updateWordModeEnabled() {
         wordMode.classList.remove("is-disabled");
         wordMode.setAttribute("aria-disabled", "false");
         wordMode.title = "";
+        // windowControls / wordNav are shown by switchToWordMode when entering word mode.
+        if (!wordModeEnabled) {
+            windowControls.hidden = true;
+            wordNav.hidden = true;
+        }
     }
 }
 
@@ -1790,9 +1811,9 @@ function switchToWordMode() {
     wordMode.setAttribute("aria-checked", "true");
     wordModeLabel.textContent = "Word";
     savePreference("wordMode", true);
-    wordNav.hidden = false;
-    windowControls.style.display = "flex";
-    progress.hidden = true;
+wordNav.hidden = false;
+        windowControls.hidden = false;
+        progress.hidden = true;
     document.querySelector("#audio-time").hidden = true;
     playPausesHidden = true;
     playPause.style.display = "none";
@@ -1852,7 +1873,7 @@ function switchToUtteranceMode() {
     wordModeLabel.textContent = "Utterance";
     savePreference("wordMode", false);
     wordNav.hidden = true;
-    windowControls.style.display = "none";
+    windowControls.hidden = true;
     progress.hidden = false;
     document.querySelector("#audio-time").hidden = false;
     playPausesHidden = false;
