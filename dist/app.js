@@ -374,11 +374,15 @@ function parseEntry(entry) {
         const text = String(entry[0] ?? "").trim();
         const morphology = Array.isArray(entry[1]) ? entry[1] : [];
         const wordSpans = Array.isArray(entry[2]) ? entry[2] : [];
-        // Derive start/end from word spans
+        // Start/end: prefer word spans when present (seoul corpus), fall back to
+        // explicit values (conversational/spontaneous corpora have no word spans).
         let start = null, end = null;
         if (wordSpans.length > 0) {
             start = Number(wordSpans[0][0]);
             end = Number(wordSpans[wordSpans.length - 1][1]);
+        } else if (entry.length > 3) {
+            start = Number(entry[3]);
+            end = Number(entry[4]);
         }
         return {
             start,

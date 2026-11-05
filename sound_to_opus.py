@@ -7,9 +7,14 @@ INPUT_DIR = Path("sound")
 OUTPUT_DIR = Path("sound_opus")
 BITRATE = 32_000
 
+# Only convert the new corpora (conversational + spontaneous), not the seoul corpus.
+SUBDIRS = ["conversational_speech_corpus", "spontaneous_speech_corpus"]
+
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-files = sorted(INPUT_DIR.rglob("*.flac"))
+files = []
+for sub in SUBDIRS:
+    files += sorted((INPUT_DIR / sub).rglob("*.flac")) + sorted((INPUT_DIR / sub).rglob("*.wav"))
 success = 0
 failed = 0
 
