@@ -12,7 +12,7 @@ def set_clip_info(clip_info_impl):
     clip_info = clip_info_impl
 
 
-@app.get("/api/clips/<clip_name>/play")
+@app.get("/api/clips/<path:clip_name>/play")
 def play_sound(clip_name: str):
     try:
         audio, length = clip_info.get_clip_sound(clip_name)

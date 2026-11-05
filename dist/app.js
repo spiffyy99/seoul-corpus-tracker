@@ -26,6 +26,7 @@ const progress = document.querySelector("#progress");
 const audioTime = document.querySelector("#audio-time");
 const speakerInfo = document.querySelector("#speaker-info");
 const libraryCount = document.querySelector("#library-count");
+const corpusSelect = document.querySelector("#corpus-select");
 const nextTrack = document.querySelector("#next-track");
 const randomTrack = document.querySelector("#random-track");
 const downloadTrack = document.querySelector("#download-track");
@@ -48,7 +49,18 @@ const windowRight = document.querySelector("#window-right");
 const PREFERENCES_KEY = "seoul-corpus-tracker.preferences.v1";
 let preferences = readPreferences();
 
+// Human-readable labels for each corpus subdir under transcripts_json/ and sound_opus/.
+const CORPUS_LABELS = {
+    "seoul_corpus": "Seoul Corpus",
+    "conversational_speech_corpus": "Conversational Speech",
+    "spontaneous_speech_corpus": "Spontaneous Speech",
+};
+
 let clips = [];
+let clipCorpora = {};     // clip name -> corpus subdir
+let clipMetadata = {};    // corpus subdir -> { clip_id -> metadata fields }
+let corpusOptions = [];   // [{key, label, count}]
+let corpusFilter = "";    // currently selected corpus subdir, "" = all
 let currentClip = null;
 let utterances = [];
 let activeUtteranceEnd = null;
@@ -56,6 +68,7 @@ let activeUtterance = null;
 let revealCandidate = null;
 let revealedUtterance = null;
 let revealedWord = null;
+let hasWordTimestamps = false;  // true when the current clip has word-level spans
 let selectionId = 0;
 let estimatedDuration = 0;
 let seeking = false;
@@ -88,8 +101,13 @@ function ensureAudioContext() {
     return audioCtx;
 }
 
+function audioKey(clipName) {
+    const corpus = clipCorpora[clipName] || "";
+    return corpus ? `${corpus}/${clipName}` : clipName;
+}
+
 async function decodeClipBuffer(clipName) {
-    const blobUrl = `/api/clips/${encodeURIComponent(clipName)}/play`;
+    const blobUrl = `/api/clips/${encodeURIComponent(audioKey(clipName))}/play`;
     const response = await fetch(blobUrl);
     const arrayBuffer = await response.arrayBuffer();
     const ctx = await ensureAudioContext();
@@ -109,10 +127,14 @@ async function playSegment(startSec, endSec) {
     if (!audioCtx) audioCtx = ctx;
     if (ctx.state == "suspended") await ctx.resume();
     const sampleRate = audioBuffer.sampleRate;
+    // Guard against NaN/Infinity timestamps (e.g. corpora without end times).
+    if (!Number.isFinite(startSec) || !Number.isFinite(endSec) || endSec <= startSec) return;
     const startFrame = Math.floor(startSec * sampleRate);
     const endFrame = Math.floor(endSec * sampleRate);
     const frames = endFrame - startFrame;
-    if (frames <= 0) return;
+    // NaN timestamps (corpora without end times) make frames NaN, and
+    // `NaN <= 0` is false, so guard explicitly against non-finite frame counts.
+    if (!Number.isInteger(frames) || frames <= 0) return;
     const channels = audioBuffer.numberOfChannels; // usually 1
 
     // Grab the samples for the segment
@@ -338,21 +360,22 @@ function idbPutAudio(name, blob) {
 }
 
 async function resolveAudioUrl(name) {
-    if (audioCache.has(name)) {
-        return audioCache.get(name);
+    const key = audioKey(name);
+    if (audioCache.has(key)) {
+        return audioCache.get(key);
     }
-    const cachedBlob = await idbGetAudio(name);
+    const cachedBlob = await idbGetAudio(key);
     if (cachedBlob) {
         const blobUrl = URL.createObjectURL(cachedBlob);
-        audioCache.set(name, blobUrl);
+        audioCache.set(key, blobUrl);
         return blobUrl;
     }
-    const audioUrl = `/api/clips/${encodeURIComponent(name)}/play`;
+    const audioUrl = `/api/clips/${encodeURIComponent(key)}/play`;
     const response = await fetch(audioUrl);
     const blob = await response.blob();
     const blobUrl = URL.createObjectURL(blob);
-    audioCache.set(name, blobUrl);
-    idbPutAudio(name, blob).catch(() => {});
+    audioCache.set(key, blobUrl);
+    idbPutAudio(key, blob).catch(() => {});
     return blobUrl;
 }
 
@@ -373,23 +396,32 @@ function parseEntry(entry) {
     if (Array.isArray(entry)) {
         const text = String(entry[0] ?? "").trim();
         const morphology = Array.isArray(entry[1]) ? entry[1] : [];
-        const wordSpans = Array.isArray(entry[2]) ? entry[2] : [];
-        // Start/end: prefer word spans when present (seoul corpus), fall back to
-        // explicit values (conversational/spontaneous corpora have no word spans).
+        // Two array layouts exist in the transcript JSONs:
+        //   seoul corpus:      [text, morphology, wordSpans, start, end]
+        //   conversational:    [text, morphology, start, end]
+        //   spontaneous:       [text, morphology, start, end]
+        // Distinguish by the type of entry[2]: an array of word spans vs a number.
         let start = null, end = null;
-        if (wordSpans.length > 0) {
-            start = Number(wordSpans[0][0]);
-            end = Number(wordSpans[wordSpans.length - 1][1]);
+        if (Array.isArray(entry[2])) {
+            const wordSpans = entry[2];
+            if (wordSpans.length > 0) {
+                start = Number(wordSpans[0][0]);
+                end = Number(wordSpans[wordSpans.length - 1][1]);
+            }
+            if (entry.length > 3) {
+                if (start == null) start = Number(entry[3]);
+                if (end == null && entry.length > 4) end = Number(entry[4]);
+            }
         } else if (entry.length > 3) {
-            start = Number(entry[3]);
-            end = Number(entry[4]);
+            start = Number(entry[2]);
+            end = Number(entry[3]);
         }
         return {
             start,
             end,
             text,
             morphology,
-            wordSpans,
+            wordSpans: Array.isArray(entry[2]) ? entry[2] : [],
         };
     }
     return {
@@ -505,14 +537,28 @@ function createEmptyState(title, message) {
     return state;
 }
 
+function clipDetailText(name) {
+    const corpus = clipCorpora[name] || "";
+    const meta = (corpus && clipMetadata[corpus] && clipMetadata[corpus][name])
+        ? clipMetadata[corpus][name]
+        : null;
+    const info = parseClipName(name);
+    if (meta && meta.topic) return meta.topic;
+    if (info) return `${info.speaker_age} years · segment ${info.segment_number}`;
+    return "Transcript recording";
+}
+
 function renderClips() {
     const query = clipSearch.value.trim().toLowerCase();
-    const visibleClips = clips.filter(name => name.toLowerCase().includes(query));
+    const visibleClips = clips.filter(name =>
+        (!corpusFilter || clipCorpora[name] === corpusFilter) &&
+        name.toLowerCase().includes(query)
+    );
     clipList.replaceChildren();
     libraryCount.textContent = `${visibleClips.length} / ${clips.length}`;
 
     if (visibleClips.length === 0) {
-        clipList.append(createEmptyState("No recordings found", "Try another speaker ID or segment."));
+        clipList.append(createEmptyState("No recordings found", "Try another corpus or speaker ID."));
         return;
     }
 
@@ -522,11 +568,18 @@ function renderClips() {
         button.type = "button";
         button.className = "clip-button";
         button.setAttribute("aria-current", name === currentClip ? "true" : "false");
+        button.setAttribute("data-corpus", clipCorpora[name] || "");
         if (name === currentClip) button.classList.add("active");
 
         const index = document.createElement("span");
         index.className = "clip-index";
-        index.textContent = info ? info.speaker_id.slice(1) : "—";
+        if (info) {
+            // Seoul corpus clips are segments of an interview — show the speaker number.
+            index.textContent = info.speaker_id.slice(1);
+        } else {
+            // Conversational/spontaneous clips are whole recordings — show a play icon.
+            index.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5 12 8l-7 4.5z" fill="currentColor"/></svg>';
+        }
 
         const label = document.createElement("span");
         label.className = "clip-label";
@@ -535,9 +588,7 @@ function renderClips() {
         clipName.textContent = name;
         const detail = document.createElement("span");
         detail.className = "clip-detail";
-        detail.textContent = info
-            ? `${info.speaker_age} years · segment ${info.segment_number}`
-            : "Transcript recording";
+        detail.textContent = clipDetailText(name);
         label.append(clipName, detail);
 
         const arrow = document.createElement("span");
@@ -702,41 +753,112 @@ function revealButtonAfterSlotOpens(row, button) {
     fallbackTimer = window.setTimeout(finish, fallbackDelay);
 }
 
+function renderAttribution() {
+    const tooltip = document.querySelector("#attribution-tooltip");
+    if (!tooltip) return;
+    const corpus = clipCorpora[currentClip] || "";
+    const blocks = [];
+
+    const seoulBlock = `
+        <strong>Korean Corpus of Spontaneous Speech (Seoul Corpus)</strong><br>
+        Available from <a href="https://www.openslr.org/113/" target="_blank" rel="noopener">OpenSLR (SLR113)</a>,
+        licensed under
+        <a href="https://www.creativecommons.org/licenses/by-nc/2.0/" target="_blank" rel="noopener">CC BY-NC 2.0</a> for non-commercial use.
+        Supported by the National Research Foundation of Korea (NRF-2012S1A5A2A03034027).<br>
+        Citation: Yun et al. (2015), “The Korean Corpus of Spontaneous Speech,”
+        <em>Journal of the Korean Society of Speech Science</em>, 7(2), 103–109.
+    `;
+    const ccByNcNd = `
+        Licensed under
+        <a href="https://www.creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a>
+        — attribution and non-commercial use only; no derivatives.
+    `;
+
+    if (corpus === "seoul_corpus" || !corpus) {
+        blocks.push(seoulBlock);
+    }
+    if (corpus === "conversational_speech_corpus") {
+        blocks.push(`
+            <strong>Conversational Speech Corpus</strong><br>
+            ${ccByNcNd}
+            This is an independent project, not affiliated with or endorsed by the corpus creators.
+        `);
+    }
+    if (corpus === "spontaneous_speech_corpus") {
+        blocks.push(`
+            <strong>Spontaneous Speech Corpus</strong><br>
+            ${ccByNcNd}
+            This is an independent project, not affiliated with or endorsed by the corpus creators.
+        `);
+    }
+    if (!corpus) {
+        blocks.push(`Audio may be compressed or presented in segments for listening practice.
+            This is an independent project, not affiliated with or endorsed by the corpus creators or OpenSLR.`);
+    } else {
+        blocks.push(`Audio may be compressed or presented in segments for listening practice.
+            This is an independent project, not affiliated with or endorsed by the corpus creators.`);
+    }
+
+    tooltip.innerHTML = blocks.join("<br><br>");
+}
+
 function renderSpeakerInfo(name) {
     speakerInfo.replaceChildren();
+    const corpus = clipCorpora[name] || "";
+    renderAttribution();
+    const meta = (corpus && clipMetadata[corpus] && clipMetadata[corpus][name])
+        ? clipMetadata[corpus][name]
+        : null;
     const info = parseClipName(name);
-    if (!info) {
+
+    // Build the list of metadata chips. The seoul corpus exposes speaker age /
+    // gender / interviewer / segment via parseClipName(); the conversational and
+    // spontaneous corpora expose topic / gender / age / region from the
+    // metadata text file.
+    const chips = [];
+    if (meta) {
+        if (meta.topic) chips.push(["topic", "Topic", meta.topic]);
+        if (meta.gender) chips.push(["gender", "Gender", meta.gender]);
+        if (meta.age) chips.push(["age", "Age", `${meta.age} years`]);
+        if (meta.region) chips.push(["region", "Region", meta.region]);
+    }
+    if (info) {
+        if (!meta || !meta.age) chips.push(["age", "Age", `${info.speaker_age} years`]);
+        if (!meta || !meta.gender) chips.push(["gender", "Gender", info.speaker_gender]);
+        chips.push(["interviewer", "Interviewer", info.interviewer_gender]);
+        chips.push(["segment", "Segment", String(info.segment_number)]);
+    }
+
+    if (!chips.length) {
         speakerInfo.hidden = true;
         return;
     }
     speakerInfo.hidden = false;
-    const fields = [
-        ["age", "Age", `${info.speaker_age} years`],
-        ["gender", "Gender", info.speaker_gender],
-        ["interviewer", "Interviewer", info.interviewer_gender],
-        ["segment", "Segment", String(info.segment_number)],
-    ];
-    fields.forEach(([kind, label, value]) => {
+    chips.forEach(([kind, label, value]) => {
         const chip = document.createElement("span");
         chip.className = `meta-chip ${kind}`;
-        const name = document.createElement("strong");
-        name.textContent = `${label}:`;
+        const nameEl = document.createElement("strong");
+        nameEl.textContent = `${label}:`;
         const text = document.createElement("span");
         text.textContent = value;
-        chip.append(name, text);
+        chip.append(nameEl, text);
         speakerInfo.append(chip);
     });
 }
 
 async function selectClip(name) {
     const thisSelection = ++selectionId;
+    const corpus = clipCorpora[name] || "";
     utteranceRequestId += 1;
     cancelPendingUtteranceStart();
     pendingUtteranceSeek = null;
     stopBuffer();
     audioBuffer = null;
     currentClip = name;
+    corpusFilter = corpus;
+    corpusSelect.value = corpus;
     savePreference("selectedClip", name);
+    savePreference("corpusFilter", corpus);
     mainPanel.classList.add("has-selection");
     utterances = [];
     activeUtterance = null;
@@ -752,12 +874,24 @@ async function selectClip(name) {
     wordsBuilt = false;
     activeWord = null;
     activeWordIndex = null;
+    hasWordTimestamps = false;
     utteranceList.scrollTop = 0;
     utteranceList.scrollLeft = 0;
 
     requestPlayback(false);
     player.removeAttribute("src");
     player.load();
+    // Reset the UI to zero immediately — switching clips should not leave the
+    // seeker parked at the previous clip's position until the next timeupdate.
+    progress.value = "0";
+    progress.max = "0";
+    audioTime.textContent = "0:00 / 0:00";
+    bufferOffset = 0;
+    bufferStartTime = 0;
+    bufferPlaying = false;
+    // The HTML5 <audio> element keeps its currentTime across removeAttribute("src")
+    // + load(), so reset it explicitly or the new clip resumes at the old time.
+    try { player.currentTime = 0; } catch {}
     downloadTrack.removeAttribute("href");
     downloadTrack.removeAttribute("download");
     downloadTrack.classList.add("is-disabled");
@@ -776,8 +910,11 @@ async function selectClip(name) {
     setStatus(`Opening ${name}…`);
 
     try {
+        const transcriptPath = corpus
+            ? `transcripts_json/${encodeURIComponent(corpus)}/${encodeURIComponent(name)}.json`
+            : `transcripts_json/${encodeURIComponent(name)}.json`;
         if (!utteranceCache.has(name)) {
-            const data = await getJson(`transcripts_json/${encodeURIComponent(name)}.json`);
+            const data = await getJson(transcriptPath);
             utteranceCache.set(name, {
                 utterances: (data.utterances || []).map(parseEntry),
                 length: Number(data.length) || 0,
@@ -788,19 +925,25 @@ async function selectClip(name) {
         const cached = utteranceCache.get(name);
         utterances = cached.utterances;
         estimatedDuration = cached.length;
+        hasWordTimestamps = utterances.some(u => Array.isArray(u.wordSpans) && u.wordSpans.length > 0);
+        updateWordModeEnabled();
         renderUtterances();
         setEstimatedDuration();
-        pendingAudioUrl = `/api/clips/${encodeURIComponent(name)}/play`;
+        const key = audioKey(name);
+        pendingAudioUrl = `/api/clips/${encodeURIComponent(key)}/play`;
         downloadTrack.href = pendingAudioUrl;
-        downloadTrack.download = `${name}.opus`;
+        downloadTrack.download = `${key.replace(/\//g, "_")}.opus`;
         downloadTrack.classList.remove("is-disabled");
         downloadTrack.setAttribute("aria-disabled", "false");
         player.playbackRate = Number(speed.value);
         playPause.disabled = estimatedDuration <= 0;
         setStatus(`${utterances.length} utterances loaded · select a line to listen closely`);
-        if (preferences.wordMode === true) {
+        if (preferences.wordMode === true && hasWordTimestamps) {
             wordMode.setAttribute("aria-checked", "true");
             switchToWordMode();
+        } else if (!hasWordTimestamps) {
+            wordMode.setAttribute("aria-checked", "false");
+            wordModeLabel.textContent = "Utterance";
         }
     } catch (error) {
         if (thisSelection !== selectionId) return;
@@ -1624,8 +1767,25 @@ function getVisibleWords() {
     return filtered;
 }
 
+function updateWordModeEnabled() {
+    if (!hasWordTimestamps) {
+        // Current clip has no word-level timestamps: grey out the toggle.
+        wordMode.classList.add("is-disabled");
+        wordMode.setAttribute("aria-disabled", "true");
+        wordMode.title = "Word mode is unavailable for this corpus (no word-level timestamps)";
+        if (wordModeEnabled) {
+            switchToUtteranceMode();
+        }
+    } else {
+        wordMode.classList.remove("is-disabled");
+        wordMode.setAttribute("aria-disabled", "false");
+        wordMode.title = "";
+    }
+}
+
 function switchToWordMode() {
     if (wordModeEnabled) return;
+    if (!hasWordTimestamps) return;
     wordModeEnabled = true;
     wordMode.setAttribute("aria-checked", "true");
     wordModeLabel.textContent = "Word";
@@ -2187,13 +2347,58 @@ async function init() {
         MORPH_CATEGORIES.forEach(group => {
             group.tags.forEach(tag => tagToType.set(tag, group.id));
         });
-        clips = data
-            .filter(name => typeof name === "string")
-            .map(name => name.replace(/\.json$/, ""))
-            .sort();
+
+        // clips.json is now a map of corpus subdir -> { clip_id -> metadata }.
+        // Each clip's metadata may be either a flat list (legacy) or a dict.
+        clipCorpora = {};
+        clipMetadata = {};
+        clips = [];
+        corpusOptions = [];
+        for (const [corpus, value] of Object.entries(data)) {
+            let entries;
+            if (Array.isArray(value)) {
+                entries = value.map(name => [name, {}]);
+            } else if (value && typeof value === "object") {
+                entries = Object.entries(value);
+            } else {
+                continue;
+            }
+            clipMetadata[corpus] = {};
+            for (const [name, meta] of entries) {
+                if (typeof name !== "string") continue;
+                clipCorpora[name] = corpus;
+                clips.push(name);
+                if (meta && typeof meta === "object") clipMetadata[corpus][name] = meta;
+            }
+            corpusOptions.push({
+                key: corpus,
+                label: CORPUS_LABELS[corpus] || corpus,
+                count: entries.length,
+            });
+        }
+        clips.sort();
+
+        // Populate the corpus dropdown.
+        corpusSelect.replaceChildren();
+        corpusSelect.append(new Option("All corpora", ""));
+        for (const opt of corpusOptions) {
+            corpusSelect.append(new Option(`${opt.label} (${opt.count})`, opt.key));
+        }
+        corpusFilter = "";
+        if (typeof preferences.corpusFilter === "string") {
+            corpusFilter = preferences.corpusFilter;
+            corpusSelect.value = corpusFilter;
+        }
+        corpusSelect.addEventListener("change", () => {
+            corpusFilter = corpusSelect.value;
+            savePreference("corpusFilter", corpusFilter);
+            renderClips();
+        });
+
         nextTrack.disabled = clips.length === 0;
         randomTrack.disabled = clips.length === 0;
         renderClips();
+        renderAttribution();
         restorePreferences();
         if (typeof preferences.selectedClip === "string" && clips.includes(preferences.selectedClip)) {
             await selectClip(preferences.selectedClip);

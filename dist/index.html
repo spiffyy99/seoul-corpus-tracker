@@ -59,6 +59,12 @@
                         <h2 id="library-title">Recordings</h2>
                         <span id="library-count" class="library-count">—</span>
                     </div>
+                    <label class="corpus-select-wrap">
+                        <span class="sr-only">Corpus</span>
+                        <select id="corpus-select" class="corpus-select" aria-label="Choose a corpus">
+                            <option value="">All corpora</option>
+                        </select>
+                    </label>
                 </div>
                 <label class="search-wrap">
                     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.7" cy="8.7" r="5.7" stroke="currentColor" stroke-width="1.7"/><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
@@ -171,24 +177,9 @@
             </main>
         </div>
 
-        <footer class="attribution">
+<footer class="attribution">
             <span class="attribution-label" tabindex="0">Attribution &amp; Disclaimer</span>
-            <div class="attribution-tooltip" role="tooltip">
-              Uses the <em>Korean Corpus of Spontaneous Speech (Seoul Corpus)</em>,
-              available from <a href="https://www.openslr.org/113/" target="_blank" rel="noopener">OpenSLR (SLR113)</a>,
-              licensed under
-              <a href="https://www.creativecommons.org/licenses/by-nc/2.0/" target="_blank" rel="noopener">CC BY-NC 2.0</a> for non-commercial use.
-              Supported by the National Research Foundation of Korea
-              (NRF-2012S1A5A2A03034027).
-
-              <br><br>
-              Citation: Yun et al. (2015), “The Korean Corpus of Spontaneous Speech,”
-              <em>Journal of the Korean Society of Speech Sciences</em>, 7(2), 103–109.
-
-              <br><br>
-              Audio may be compressed or presented in segments for listening practice.
-              This is an independent project, not affiliated with or endorsed by the corpus creators or OpenSLR.
-            </div>
+            <div id="attribution-tooltip" class="attribution-tooltip" role="tooltip"></div>
         </footer>
     </div>
 </body>

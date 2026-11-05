@@ -274,6 +274,38 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
     font-variant-numeric: tabular-nums;
 }
 
+.corpus-select-wrap {
+    display: block;
+    margin: 10px 20px 0;
+}
+
+.corpus-select {
+    width: 100%;
+    font: inherit;
+    font-size: 0.82rem;
+    color: var(--ink);
+    background: #fffdf8;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+}
+
+.corpus-select:focus { outline: none; border-color: #8999d2; }
+
+[data-theme="dark"] .corpus-select {
+    background: #202533;
+    color: #e7eaf2;
+    border-color: #2c3346;
+}
+
+.mode-toggle.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.mode-toggle.is-disabled:hover { background: transparent; transform: none; }
+
 .search-wrap {
     position: relative;
     display: block;
@@ -349,8 +381,26 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 
 .clip-button.active .clip-index { background: var(--coral); color: white; }
 .clip-label { min-width: 0; }
-.clip-name { display: block; font-size: 0.88rem; font-weight: 750; letter-spacing: 0.015em; }
-.clip-detail { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 0.72rem; }
+.clip-name {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 750;
+    letter-spacing: 0.015em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.clip-detail {
+    display: block;
+    margin-top: 2px;
+    color: var(--ink-soft);
+    font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
 .clip-arrow { color: #9293a0; font-size: 1.1rem; }
 
 .main-panel {
@@ -431,6 +481,9 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .meta-chip.gender { background: var(--blue-soft); color: #435b9f; }
 .meta-chip.interviewer { background: var(--teal-soft); color: #316e65; }
 .meta-chip.segment { background: var(--coral-soft); color: #a64e40; }
+.meta-chip.topic { background: var(--teal-soft); color: #316e65; }
+.meta-chip.region { background: var(--ink-soft); color: #fff; }
+.meta-chip.device { background: var(--gold-soft); color: #805b20; }
 
 .audio-controls {
     margin: 12px 0 10px;
@@ -1141,6 +1194,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 [data-theme="dark"] .meta-chip.gender { color: #bac5ff; }
 [data-theme="dark"] .meta-chip.interviewer { color: #a5e2d5; }
 [data-theme="dark"] .meta-chip.segment { color: #ffc0b0; }
+[data-theme="dark"] .meta-chip.topic { color: #a5e2d5; }
+[data-theme="dark"] .meta-chip.region { color: #f1f0f7; }
 
 [data-theme="dark"] .track-button.primary {
     border-color: #596fa8;
