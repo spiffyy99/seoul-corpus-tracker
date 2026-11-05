@@ -309,12 +309,54 @@ const captionMorphemeRanges = new WeakMap();
 
 const IDB_NAME = "seoul-corpus-tracker";
 const IDB_STORE = "audio-blobs";
+// Cap the IndexedDB blob cache so a browsing session can't balloon storage.
+// Each opus clip is ~2-6 MB; 100 clips ≈ 200-600 MB, which is a reasonable
+// ceiling for a long listening session.
+const IDB_MAX_ENTRIES = 100;
 let idbDb = null;
+
+// Touch a record's last-used timestamp so LRU eviction can find the stalest.
+function idbTouch(name) {
+    return openIdb().then(db => new Promise((resolve) => {
+        const tx = db.transaction(IDB_STORE, "readwrite");
+        const store = tx.objectStore(IDB_STORE);
+        const getReq = store.get(name);
+        getReq.onsuccess = () => {
+            if (!getReq.result) { resolve(); return; }
+            const putReq = store.put({ ...getReq.result, lastUsed: Date.now() });
+            putReq.onsuccess = () => resolve();
+            putReq.onerror = () => resolve();
+        };
+        getReq.onerror = () => resolve();
+    }));
+}
+
+// Evict the least-recently-used entries down to `keep`.
+function idbEvictLRU(store, keep) {
+    return new Promise((resolve) => {
+        const req = store.getAll();
+        req.onsuccess = () => {
+            const rows = req.result || [];
+            if (rows.length <= keep) { resolve(); return; }
+            rows.sort((a, b) => (a.lastUsed || 0) - (b.lastUsed || 0));
+            const toDelete = rows.slice(0, rows.length - keep);
+            let pending = toDelete.length;
+            if (pending === 0) { resolve(); return; }
+            const done = () => { if (--pending === 0) resolve(); };
+            toDelete.forEach(row => {
+                const delReq = store.delete(row.name);
+                delReq.onsuccess = done;
+                delReq.onerror = done;
+            });
+        };
+        req.onerror = () => resolve();
+    });
+}
 
 function openIdb() {
     return new Promise((resolve, reject) => {
         if (idbDb) return resolve(idbDb);
-        const req = indexedDB.open(IDB_NAME, 2);
+        const req = indexedDB.open(IDB_NAME, 3);
         req.onupgradeneeded = () => {
             const db = req.result;
             if (!db.objectStoreNames.contains(IDB_STORE)) {
@@ -344,7 +386,11 @@ function idbGetAudio(name) {
         const tx = db.transaction(IDB_STORE, "readonly");
         const store = tx.objectStore(IDB_STORE);
         const req = store.get(name);
-        req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+        req.onsuccess = () => {
+            const blob = req.result ? req.result.blob : null;
+            if (blob) idbTouch(name).catch(() => {});
+            resolve(blob);
+        };
         req.onerror = () => reject(req.error);
     }));
 }
@@ -353,8 +399,8 @@ function idbPutAudio(name, blob) {
     return openIdb().then(db => new Promise((resolve, reject) => {
         const tx = db.transaction(IDB_STORE, "readwrite");
         const store = tx.objectStore(IDB_STORE);
-        const req = store.put({ name, blob });
-        req.onsuccess = () => resolve();
+        const req = store.put({ name, blob, lastUsed: Date.now() });
+        req.onsuccess = () => idbEvictLRU(store, IDB_MAX_ENTRIES).then(resolve, resolve);
         req.onerror = () => reject(req.error);
     }));
 }
