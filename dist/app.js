@@ -1676,23 +1676,14 @@ function scrollActiveUtteranceIntoView(button) {
     }
 }
 
-function scrollActiveItemIntoViewCenter(button) {
-    // Center the active item within the list box (list-only scroll, never the page).
-    // scrollIntoView on a child of a scroll container scrolls that container,
-    // not the page — the list has overflow:auto + overscroll-behavior:contain.
-    requestAnimationFrame(() => {
-        button.scrollIntoView({ block: "center", inline: "nearest" });
-    });
-}
-
 function scrollActiveItemIntoViewIfPresent() {
-    // After a filter/search re-render, keep the active item centered if it is
-    // still visible. If it was filtered out, do nothing. The render functions
-    // mark the active item with the "active" class, so look that up fresh from
-    // the DOM (the old Map references are detached after re-render).
+    // After a filter/search/re-render, keep the active item in view — but ONLY
+    // if it is actually off-screen. Never force-center: that re-centers even
+    // when the item is already visible, and scrollIntoView can bubble up to
+    // scroll the whole page. Use the list-only delta logic instead.
     const button = utteranceList.querySelector("button.utterance.active");
     if (button) {
-        requestAnimationFrame(() => scrollActiveItemIntoViewCenter(button));
+        requestAnimationFrame(() => scrollActiveUtteranceIntoView(button));
     }
 }
 
@@ -1905,7 +1896,7 @@ if (activeWord) {
         const button = wordButtons.get(activeWord);
         if (button) {
             button.classList.add("active");
-            scrollActiveItemIntoViewCenter(button);
+            scrollActiveUtteranceIntoView(button);
         }
         updateCaption(activeWord);
         requestPlayback(false);
@@ -1946,7 +1937,7 @@ function switchToUtteranceMode() {
             const button = utteranceButtons.get(activeUtterance);
             if (button) {
                 button.classList.add("active");
-                scrollActiveItemIntoViewCenter(button);
+                scrollActiveUtteranceIntoView(button);
             }
             updateCaption(activeUtterance);
         }
