@@ -91,6 +91,13 @@ let bufferSource = null;
 let bufferStartTime = 0;
 let bufferOffset = 0;
 let bufferPlaying = false;
+// Background decode promise — started on first play, resolves once the full
+// file is decoded so SoundTouch tempo changes work without blocking playback.
+let pendingDecode = null;
+// Set while switchToSoundTouch() is mid-decode (async). Prevents stopBuffer()
+// from clearing bufferSource before the switch completes, which would cause
+// concurrent blob + SoundTouch playback.
+let soundTouchPending = false;
 
 function ensureAudioContext() {
     if (audioCtx) return audioCtx;
@@ -121,44 +128,92 @@ async function decodeClipBuffer(clipName) {
 // ------------------------------------------------------------------
 async function playSegment(startSec, endSec) {
     stopBuffer();
-    // Ensure we have the decoded AudioBuffer
-    if (!audioBuffer) await decodeClipBuffer(currentClip);
+    if (!Number.isFinite(startSec) || !Number.isFinite(endSec) || endSec <= startSec) return;
+    const rate = Number(speed.value) || 1;
+
+    // Always start with blob playback — instant, cached, no decode wait.
+    const blobUrl = await resolveAudioUrl(currentClip);
+    if (player.src !== blobUrl) player.src = blobUrl;
+    player.currentTime = startSec;
+    player.playbackRate = 1;
+    const vol = Number(volumeSlider.value);
+    player.volume = Math.min(Math.max(vol, 0), 1);
+    activeUtteranceEnd = endSec;
+    bufferPlaying = false;
+    playbackIntent = true;
+    playbackPending = false;
+    bufferOffset = startSec;
+    updateAudioControls();
+    try {
+        await player.play();
+    } catch (error) {
+        finishPlaybackRequest(error, ++playbackRequestId);
+        return;
+    }
+    syncBufferTime();
+
+    // Decode in the background so SoundTouch is ready when speed changes.
+    if (!audioBuffer && !pendingDecode) {
+        pendingDecode = decodeClipBuffer(currentClip).then(() => {
+            pendingDecode = null;
+        }).catch(() => {
+            pendingDecode = null;
+        });
+    }
+}
+
+// Switch from blob playback to SoundTouch from the current position.
+// Called when the user changes speed to != 1x and the background decode has
+// finished. Falls back to blob if the buffer isn't ready yet.
+async function switchToSoundTouch() {
+    if (!audioBuffer || bufferPlaying || soundTouchPending) return;
+    soundTouchPending = true;
+    stopBuffer();
+    const startSec = Math.max(0, player.currentTime);
+    const endSec = activeUtteranceEnd || estimatedDuration || 0;
+    if (endSec <= startSec) {
+        soundTouchPending = false;
+        return;
+    }
+
     const ctx = audioCtx || ensureAudioContext();
     if (!audioCtx) audioCtx = ctx;
-    if (ctx.state == "suspended") await ctx.resume();
+    if (ctx.state === "suspended") await ctx.resume();
     const sampleRate = audioBuffer.sampleRate;
-    // Guard against NaN/Infinity timestamps (e.g. corpora without end times).
-    if (!Number.isFinite(startSec) || !Number.isFinite(endSec) || endSec <= startSec) return;
     const startFrame = Math.floor(startSec * sampleRate);
     const endFrame = Math.floor(endSec * sampleRate);
     const frames = endFrame - startFrame;
-    // NaN timestamps (corpora without end times) make frames NaN, and
-    // `NaN <= 0` is false, so guard explicitly against non-finite frame counts.
-    if (!Number.isInteger(frames) || frames <= 0) return;
-    const channels = audioBuffer.numberOfChannels; // usually 1
+    if (!Number.isInteger(frames) || frames <= 0) {
+        soundTouchPending = false;
+        return;
+    }
+    const channels = audioBuffer.numberOfChannels;
 
-    // Grab the samples for the segment
     const segment = new Float32Array(frames * channels);
     for (let ch = 0; ch < channels; ch++) {
         const src = audioBuffer.getChannelData(ch);
         segment.set(src.subarray(startFrame, endFrame), ch * frames);
     }
 
-    // Duplicate mono → stereo (SoundTouch expects 2 samples per frame)
     const stereo = new Float32Array(frames * 2);
     for (let i = 0; i < frames; i++) {
         stereo[i * 2] = segment[i];
         stereo[i * 2 + 1] = segment[i];
     }
 
-    // Run SoundTouch on the *segment only*
     const st = new SoundTouch();
+    st.sampleRate = sampleRate;
     st.tempo = Number(speed.value) || 1;
-    st.inputBuffer.putSamples(stereo, 0, frames);
 
+    const CHUNK_FRAMES = 4096;
     const chunks = [];
     let total = 0;
-    while (st.inputBuffer.frameCount > 0) {
+    let inputOffset = 0;
+    while (inputOffset < frames) {
+        const chunkFrames = Math.min(CHUNK_FRAMES, frames - inputOffset);
+        const srcOffset = inputOffset * 2;
+        st.inputBuffer.putSamples(stereo.subarray(srcOffset, srcOffset + chunkFrames * 2), 0, chunkFrames);
+        inputOffset += chunkFrames;
         st.process();
         const avail = st.outputBuffer.frameCount;
         if (avail > 0) {
@@ -167,11 +222,11 @@ async function playSegment(startSec, endSec) {
             chunks.push(chunk);
             total += avail;
         }
+        if (inputOffset % (CHUNK_FRAMES * 4) === 0) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
     }
 
-    // Build a *mono* AudioBuffer from the processed stereo data.
-    // If SoundTouch produced no output (e.g. an empty/edge segment), fall back
-    // to the raw segment so we don't hit createBuffer(1, 0, rate).
     let processed;
     if (total > 0) {
         processed = ctx.createBuffer(1, total, sampleRate);
@@ -179,7 +234,7 @@ async function playSegment(startSec, endSec) {
         let offset = 0;
         for (const c of chunks) {
             for (let i = 0; i < c.length; i += 2) {
-                outData[offset++] = c[i]; // channel 0
+                outData[offset++] = c[i];
             }
         }
     } else {
@@ -187,24 +242,26 @@ async function playSegment(startSec, endSec) {
         processed.getChannelData(0).set(segment);
     }
 
-    // Play the processed segment
     const source = ctx.createBufferSource();
     source.buffer = processed;
     source.connect(audioGainNode);
+    player.pause();
     source.start(0, 0);
     bufferSource = source;
     bufferStartTime = ctx.currentTime;
-    bufferOffset = startSec; // remember where we started
+    bufferOffset = startSec;
     bufferPlaying = true;
     playbackIntent = true;
     playbackPending = false;
+    soundTouchPending = false;
     updateAudioControls();
     syncBufferTime();
 
-// When the segment ends, switch back to blob playback
     source.onended = () => {
+        if (bufferSource !== source) return; // source was replaced by a newer playback
+        soundTouchPending = false;
         bufferPlaying = false;
-        bufferOffset = endSec; // remember where we finished
+        bufferOffset = endSec;
         activeUtteranceEnd = null;
         playbackIntent = false;
         playbackPending = false;
@@ -212,11 +269,15 @@ async function playSegment(startSec, endSec) {
         try { player.currentTime = endSec; } catch {}
         updateAudioControls();
     };
-
 }
 
-
 function stopBuffer() {
+    if (soundTouchPending) {
+        // A SoundTouch switch is mid-decode — don't clear bufferSource,
+        // just pause the HTML5 player and let the switch complete.
+        player.pause();
+        return;
+    }
     if (bufferSyncFrame) {
         cancelAnimationFrame(bufferSyncFrame);
         bufferSyncFrame = null;
@@ -763,6 +824,15 @@ function requestPlayback(shouldPlay) {
     }
     updateAudioControls();
 
+    // Decode in the background so SoundTouch is ready when speed changes.
+    if (!audioBuffer && !pendingDecode && currentClip) {
+        pendingDecode = decodeClipBuffer(currentClip).then(() => {
+            pendingDecode = null;
+        }).catch(() => {
+            pendingDecode = null;
+        });
+    }
+
     try {
         const playRequest = player.play();
         if (playRequest && typeof playRequest.catch === "function") {
@@ -901,6 +971,8 @@ async function selectClip(name) {
     stopBuffer();
     audioBuffer = null;
     currentClip = name;
+    speed.value = 1;
+    speedValue.textContent = "1×";
     corpusFilter = corpus;
     corpusSelect.value = corpus;
     savePreference("selectedClip", name);
@@ -2191,6 +2263,15 @@ speed.addEventListener("input", () => {
     player.playbackRate = rate;
     speedValue.textContent = `${rate.toFixed(2)}×`;
     savePreference("speed", rate);
+
+    // Switch to SoundTouch when moving away from 1x and the background decode
+    // has finished. Switch back to blob when returning to 1x.
+    if (rate !== 1 && playbackIntent && !bufferPlaying && audioBuffer) {
+        switchToSoundTouch();
+    } else if (rate === 1 && bufferPlaying) {
+        stopBuffer();
+        playSegment(bufferOffset, estimatedDuration || activeUtteranceEnd || 0);
+    }
 });
 
 function ensureAudioGraph() {
