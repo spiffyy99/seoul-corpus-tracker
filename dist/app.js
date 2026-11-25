@@ -153,8 +153,8 @@ async function playSegment(startSec, endSec) {
     syncBufferTime();
 
     // Decode in the background so SoundTouch is ready when speed changes.
-    // Only needed when speed != 1x; blob playback handles 1x natively.
-    if (rate !== 1 && !audioBuffer && !pendingDecode) {
+    // Blob playback starts immediately; decode runs asynchronously.
+    if (!audioBuffer && !pendingDecode) {
         pendingDecode = decodeClipBuffer(currentClip).then(() => {
             pendingDecode = null;
         }).catch(() => {
@@ -2265,8 +2265,8 @@ speed.addEventListener("input", () => {
     speedValue.textContent = `${rate.toFixed(2)}×`;
     savePreference("speed", rate);
 
-    // Switch to SoundTouch when moving away from 1x and the background decode
-    // has finished. Switch back to blob when returning to 1x.
+    // Switch to SoundTouch when moving away from 1x (decode already started at
+    // play time). Switch back to blob when returning to 1x.
     if (rate !== 1 && playbackIntent && !bufferPlaying && audioBuffer) {
         switchToSoundTouch();
     } else if (rate === 1 && bufferPlaying) {
