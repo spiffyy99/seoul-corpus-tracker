@@ -153,7 +153,8 @@ async function playSegment(startSec, endSec) {
     syncBufferTime();
 
     // Decode in the background so SoundTouch is ready when speed changes.
-    if (!audioBuffer && !pendingDecode) {
+    // Only needed when speed != 1x; blob playback handles 1x natively.
+    if (rate !== 1 && !audioBuffer && !pendingDecode) {
         pendingDecode = decodeClipBuffer(currentClip).then(() => {
             pendingDecode = null;
         }).catch(() => {
