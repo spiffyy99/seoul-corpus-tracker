@@ -114,9 +114,17 @@ function audioKey(clipName) {
 }
 
 async function decodeClipBuffer(clipName) {
-    const blobUrl = `/api/clips/${encodeURIComponent(audioKey(clipName))}/play`;
-    const response = await fetch(blobUrl);
-    const arrayBuffer = await response.arrayBuffer();
+    const key = audioKey(clipName);
+    // Use the already-cached blob from IndexedDB if available
+    let blob = await idbGetAudio(key);
+    if (!blob) {
+        // Fallback: fetch and cache
+        const audioUrl = `/api/clips/${encodeURIComponent(key)}/play`;
+        const response = await fetch(audioUrl);
+        blob = await response.blob();
+        idbPutAudio(key, blob).catch(() => {});
+    }
+    const arrayBuffer = await blob.arrayBuffer();
     const ctx = await ensureAudioContext();
     if (ctx.state === "suspended") await ctx.resume();
     audioBuffer = await ctx.decodeAudioData(arrayBuffer);
@@ -153,8 +161,8 @@ async function playSegment(startSec, endSec) {
     syncBufferTime();
 
     // Decode in the background so SoundTouch is ready when speed changes.
-    // Blob playback starts immediately; decode runs asynchronously.
-    if (!audioBuffer && !pendingDecode) {
+    // Only needed when speed != 1x; blob playback handles 1x natively.
+    if (rate !== 1 && !audioBuffer && !pendingDecode) {
         pendingDecode = decodeClipBuffer(currentClip).then(() => {
             pendingDecode = null;
         }).catch(() => {
@@ -826,7 +834,9 @@ function requestPlayback(shouldPlay) {
     updateAudioControls();
 
     // Decode in the background so SoundTouch is ready when speed changes.
-    if (!audioBuffer && !pendingDecode && currentClip) {
+    // Only needed when speed != 1x; blob playback handles 1x natively.
+    const rate = Number(speed.value) || 1;
+    if (rate !== 1 && !audioBuffer && !pendingDecode && currentClip) {
         pendingDecode = decodeClipBuffer(currentClip).then(() => {
             pendingDecode = null;
         }).catch(() => {
@@ -2265,10 +2275,22 @@ speed.addEventListener("input", () => {
     speedValue.textContent = `${rate.toFixed(2)}×`;
     savePreference("speed", rate);
 
-    // Switch to SoundTouch when moving away from 1x (decode already started at
-    // play time). Switch back to blob when returning to 1x.
-    if (rate !== 1 && playbackIntent && !bufferPlaying && audioBuffer) {
-        switchToSoundTouch();
+    // Switch to SoundTouch when moving away from 1x. If decode hasn't run yet
+    // (user played at 1x), start it now; it will call switchToSoundTouch once
+    // the buffer is ready. Switch back to blob when returning to 1x.
+    if (rate !== 1 && playbackIntent && !bufferPlaying) {
+        if (audioBuffer) {
+            switchToSoundTouch();
+        } else if (!pendingDecode) {
+            pendingDecode = decodeClipBuffer(currentClip).then(() => {
+                pendingDecode = null;
+                if (playbackIntent && !bufferPlaying && Number(speed.value) !== 1) {
+                    switchToSoundTouch();
+                }
+            }).catch(() => {
+                pendingDecode = null;
+            });
+        }
     } else if (rate === 1 && bufferPlaying) {
         stopBuffer();
         playSegment(bufferOffset, estimatedDuration || activeUtteranceEnd || 0);
